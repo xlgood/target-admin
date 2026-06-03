@@ -218,6 +218,15 @@ export interface AdminExportCardSecretsPayload {
   format: 'txt' | 'csv'
 }
 
+export interface AdminExportAvailableCardSecretsPayload {
+  product_id: number
+  sku_id?: number
+  batch_id?: number
+  limit: number
+  format: 'txt' | 'csv'
+  delete_after_export?: boolean
+}
+
 export interface AdminCardSecretQueryPayload {
   product_id?: number
   sku_id?: number
@@ -453,6 +462,8 @@ export const adminAPI = {
     api.post('/admin/card-secrets/batch-delete', data),
   exportCardSecrets: (data: AdminExportCardSecretsPayload) =>
     api.post('/admin/card-secrets/export', data, { blob: true }),
+  exportAvailableCardSecrets: (data: AdminExportAvailableCardSecretsPayload) =>
+    api.post('/admin/card-secrets/export-available', data, { blob: true }),
   getCardSecretStats: (params?: Record<string, unknown>) => api.get('/admin/card-secrets/stats', { params }),
   getCardSecretBatches: (params?: Record<string, unknown>) => api.get('/admin/card-secrets/batches', { params }),
   getCardSecretTemplate: () => api.get('/admin/card-secrets/template'),
