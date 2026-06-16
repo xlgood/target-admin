@@ -832,6 +832,69 @@ export interface AdminResellerDomain {
   profile?: AdminResellerProfileRef
 }
 
+export interface AdminResellerLocalizedText {
+  'zh-CN'?: string
+  'zh-TW'?: string
+  'en-US'?: string
+  [key: string]: string | undefined
+}
+
+export interface AdminResellerSiteConfigPayload {
+  site_name?: string
+  logo?: string
+  favicon?: string
+  announcement?: {
+    enabled?: boolean
+    type?: string
+    title?: AdminResellerLocalizedText
+    content?: AdminResellerLocalizedText
+  }
+  support?: {
+    telegram?: string
+    whatsapp?: string
+    email?: string
+    support_url?: string
+  }
+  seo?: {
+    title?: AdminResellerLocalizedText
+    keywords?: AdminResellerLocalizedText
+    description?: AdminResellerLocalizedText
+    default_og_image?: string
+  }
+  footer_links?: Array<{
+    name?: AdminResellerLocalizedText
+    url?: string
+  }>
+  nav_config?: {
+    builtin?: Record<string, boolean>
+    custom_items?: Array<{
+      name?: AdminResellerLocalizedText
+      url?: string
+      enabled?: boolean
+    }>
+  }
+  theme?: {
+    primary_color?: string
+    accent_color?: string
+    surface_color?: string
+  }
+}
+
+export interface AdminResellerSiteConfig extends Required<Pick<AdminResellerSiteConfigPayload, 'announcement' | 'support' | 'seo' | 'nav_config' | 'theme'>> {
+  id: number
+  reseller_id: number
+  site_name: string
+  logo: string
+  favicon: string
+  footer_links: Array<{
+    name?: AdminResellerLocalizedText
+    url?: string
+  }>
+  profile?: AdminResellerProfileRef
+  created_at: string
+  updated_at: string
+}
+
 export interface AdminResellerProfileApprovePayload {
   default_markup_percent?: string
   max_markup_percent?: string

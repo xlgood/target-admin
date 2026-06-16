@@ -16,6 +16,7 @@ import type {
   AdminSiteConnection,
   AdminResellerProfileApprovePayload,
   AdminResellerReasonPayload,
+  AdminResellerSiteConfigPayload,
 } from './types'
 
 export interface CaptchaPayload {
@@ -448,6 +449,14 @@ export const adminAPI = {
     api.post(`/admin/resellers/domains/${id}/approve`, {}),
   disableResellerDomain: (id: number) =>
     api.post(`/admin/resellers/domains/${id}/disable`, {}),
+  getResellerSiteConfigs: (params?: Record<string, unknown>) =>
+    api.get('/admin/resellers/site-configs', { params }),
+  getResellerSiteConfig: (resellerId: number) =>
+    api.get(`/admin/resellers/site-configs/${resellerId}`),
+  updateResellerSiteConfig: (resellerId: number, data: AdminResellerSiteConfigPayload) =>
+    api.put(`/admin/resellers/site-configs/${resellerId}`, data),
+  resetResellerSiteConfig: (resellerId: number) =>
+    api.post(`/admin/resellers/site-configs/${resellerId}/reset`, {}),
   refundOrderToWallet: (id: number, data: AdminRefundToWalletPayload) =>
     api.post(`/admin/orders/${id}/refund-to-wallet`, data),
   manualRefundOrder: (id: number, data: AdminManualRefundPayload) =>

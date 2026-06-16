@@ -408,6 +408,12 @@ const navGroups = computed<NavGroup[]>(() => {
           permission: 'GET:/admin/resellers/domains',
         },
         {
+          label: t('admin.navItems.resellerSiteConfigs'),
+          to: '/resellers/site-configs',
+          icon: Settings,
+          permission: 'GET:/admin/resellers/site-configs',
+        },
+        {
           label: t('admin.navItems.resellerLedgerEntries'),
           to: '/resellers/ledger-entries',
           icon: ReceiptText,
