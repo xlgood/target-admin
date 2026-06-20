@@ -2,6 +2,7 @@
 import { onMounted, reactive, ref } from 'vue'
 import { useDebounceFn } from '@vueuse/core'
 import { useI18n } from 'vue-i18n'
+import { useRoute } from 'vue-router'
 import { adminAPI } from '@/api/admin'
 import type { AdminResellerBalanceAccount } from '@/api/types'
 import {
@@ -22,6 +23,7 @@ import { formatDate } from '@/utils/format'
 import ComplianceGuardWrapper from '@/components/ComplianceGuardWrapper.vue'
 
 const { t } = useI18n()
+const route = useRoute()
 const loading = ref(true)
 const { refreshing, refreshList } = useListRefresh()
 const rows = ref<AdminResellerBalanceAccount[]>([])
@@ -37,9 +39,15 @@ const filters = reactive({
   keyword: '',
   resellerId: '',
   userId: '',
-  currency: '',
   status: '__all__',
 })
+
+const queryString = (value: unknown) => (Array.isArray(value) ? value[0] : value)
+
+const initFiltersFromQuery = () => {
+  const resellerId = String(queryString(route.query.reseller_id) || '').trim()
+  if (resellerId) filters.resellerId = resellerId
+}
 
 const normalizeFilterValue = (value: string) => (value === '__all__' ? '' : value)
 const pageSizeOptions = [10, 20, 50, 100]
@@ -55,7 +63,6 @@ const fetchRows = async (page = 1, options: ListFetchOptions = {}) => {
       keyword: filters.keyword || undefined,
       reseller_id: filters.resellerId || undefined,
       user_id: filters.userId || undefined,
-      currency: filters.currency || undefined,
       status: normalizeFilterValue(filters.status) || undefined,
     })
     rows.value = response.data.data || []
@@ -106,6 +113,7 @@ const statusClass = (status?: string) => {
 const isNegative = (value: number | string | undefined) => Number(value || 0) > 0
 
 onMounted(() => {
+  initFiltersFromQuery()
   fetchRows()
 })
 </script>
@@ -127,9 +135,6 @@ onMounted(() => {
           </div>
           <div class="w-full md:w-32">
             <Input v-model="filters.userId" :placeholder="t('admin.resellerBalanceAccounts.filters.userId')" @update:modelValue="debouncedSearch" />
-          </div>
-          <div class="w-full md:w-32">
-            <Input v-model="filters.currency" :placeholder="t('admin.resellerBalanceAccounts.filters.currency')" @update:modelValue="debouncedSearch" />
           </div>
           <div class="w-full md:w-44">
             <Select v-model="filters.status" @update:modelValue="handleSearch">

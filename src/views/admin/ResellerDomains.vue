@@ -241,14 +241,13 @@ onMounted(() => {
     </div>
 
     <div class="rounded-xl border border-border bg-card overflow-x-auto">
-      <Table class="min-w-[1320px]">
+      <Table class="min-w-[1100px]">
         <TableHeader class="border-b border-border bg-muted/40 text-xs uppercase text-muted-foreground">
           <TableRow>
             <TableHead class="px-6 py-3">{{ t('admin.resellerDomains.table.id') }}</TableHead>
             <TableHead class="min-w-[180px] px-6 py-3">{{ t('admin.resellerDomains.table.reseller') }}</TableHead>
             <TableHead class="min-w-[220px] px-6 py-3">{{ t('admin.resellerDomains.table.domain') }}</TableHead>
             <TableHead class="px-6 py-3">{{ t('admin.resellerDomains.table.type') }}</TableHead>
-            <TableHead class="min-w-[220px] px-6 py-3">{{ t('admin.resellerDomains.table.verificationToken') }}</TableHead>
             <TableHead class="px-6 py-3">{{ t('admin.resellerDomains.table.verificationStatus') }}</TableHead>
             <TableHead class="px-6 py-3">{{ t('admin.resellerDomains.table.status') }}</TableHead>
             <TableHead class="px-6 py-3">{{ t('admin.resellerDomains.table.primary') }}</TableHead>
@@ -259,12 +258,12 @@ onMounted(() => {
         </TableHeader>
         <TableBody class="divide-y divide-border">
           <TableRow v-if="loading">
-            <TableCell :colspan="11" class="p-0">
-              <TableSkeleton :columns="11" :rows="5" />
+            <TableCell :colspan="10" class="p-0">
+              <TableSkeleton :columns="10" :rows="5" />
             </TableCell>
           </TableRow>
           <TableRow v-else-if="rows.length === 0">
-            <TableCell colspan="11" class="px-6 py-8 text-center text-muted-foreground">{{ t('admin.resellerDomains.empty') }}</TableCell>
+            <TableCell colspan="10" class="px-6 py-8 text-center text-muted-foreground">{{ t('admin.resellerDomains.empty') }}</TableCell>
           </TableRow>
           <TableRow v-for="item in rows" :key="item.id" class="hover:bg-muted/30">
             <TableCell class="px-6 py-4">
@@ -288,7 +287,6 @@ onMounted(() => {
             </TableCell>
             <TableCell class="min-w-[220px] px-6 py-4 font-mono text-xs break-all">{{ item.domain }}</TableCell>
             <TableCell class="px-6 py-4 text-xs text-foreground">{{ typeLabel(item.type) }}</TableCell>
-            <TableCell class="min-w-[220px] px-6 py-4 font-mono text-xs text-muted-foreground break-all">{{ item.verification_token || '-' }}</TableCell>
             <TableCell class="px-6 py-4 text-xs">
               <span class="inline-flex rounded-full border px-2.5 py-1 text-xs" :class="verificationClass(item.verification_status)">
                 {{ verificationLabel(item.verification_status) }}

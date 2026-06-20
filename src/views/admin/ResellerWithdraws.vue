@@ -2,6 +2,7 @@
 import { onMounted, reactive, ref } from 'vue'
 import { useDebounceFn } from '@vueuse/core'
 import { useI18n } from 'vue-i18n'
+import { useRoute } from 'vue-router'
 import { adminAPI } from '@/api/admin'
 import type { AdminResellerWithdraw } from '@/api/types'
 import {
@@ -11,22 +12,28 @@ import {
 } from '@/constants/reseller'
 import IdCell from '@/components/IdCell.vue'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogHeader, DialogScrollContent, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import TableSkeleton from '@/components/TableSkeleton.vue'
 import ListPagination from '@/components/ListPagination.vue'
 import { useListRefresh, type ListFetchOptions } from '@/composables/useListRefresh'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 import { confirmAction } from '@/utils/confirm'
 import { notifyError, notifySuccess } from '@/utils/notify'
 import { formatDate, toRFC3339 } from '@/utils/format'
 import ComplianceGuardWrapper from '@/components/ComplianceGuardWrapper.vue'
 
 const { t } = useI18n()
+const route = useRoute()
 const loading = ref(true)
 const { refreshing, refreshList } = useListRefresh()
 const operating = ref(false)
 const rows = ref<AdminResellerWithdraw[]>([])
+const selectedWithdraw = ref<AdminResellerWithdraw | null>(null)
+const showRejectDialog = ref(false)
 const pagination = ref({
   page: 1,
   page_size: 20,
@@ -39,12 +46,15 @@ const filters = reactive({
   keyword: '',
   resellerId: '',
   userId: '',
-  currency: '',
   status: '__all__',
   createdFrom: '',
   createdTo: '',
 })
+const rejectForm = reactive({
+  reason: '',
+})
 
+const queryString = (value: unknown) => (Array.isArray(value) ? value[0] : value)
 const normalizeFilterValue = (value: string) => (value === '__all__' ? '' : value)
 const pageSizeOptions = [10, 20, 50, 100]
 const userDetailLink = (userId: number) => `${adminPath}/users/${userId}`
@@ -59,7 +69,6 @@ const fetchRows = async (page = 1, options: ListFetchOptions = {}) => {
       keyword: filters.keyword || undefined,
       reseller_id: filters.resellerId || undefined,
       user_id: filters.userId || undefined,
-      currency: filters.currency || undefined,
       status: normalizeFilterValue(filters.status) || undefined,
       created_from: toRFC3339(filters.createdFrom),
       created_to: toRFC3339(filters.createdTo),
@@ -112,17 +121,30 @@ const processorName = (item: AdminResellerWithdraw) => {
   return item.processor || item.processed_by || '-'
 }
 
-const rejectWithdraw = async (row: AdminResellerWithdraw) => {
+const initFiltersFromQuery = () => {
+  const resellerId = String(queryString(route.query.reseller_id) || '').trim()
+  if (resellerId) filters.resellerId = resellerId
+}
+
+const openRejectDialog = (row: AdminResellerWithdraw) => {
+  selectedWithdraw.value = row
+  rejectForm.reason = ''
+  showRejectDialog.value = true
+}
+
+const rejectWithdraw = async () => {
+  const row = selectedWithdraw.value
+  if (!row) return
   const confirmed = await confirmAction({
     description: t('admin.resellerWithdraws.actions.rejectConfirm', { id: row.id }),
     variant: 'destructive',
   })
   if (!confirmed) return
 
-  const reason = window.prompt(t('admin.resellerWithdraws.actions.rejectReasonPrompt')) ?? ''
   operating.value = true
   try {
-    await adminAPI.rejectResellerWithdraw(row.id, { reason: reason.trim() || undefined })
+    await adminAPI.rejectResellerWithdraw(row.id, { reason: rejectForm.reason.trim() || undefined })
+    showRejectDialog.value = false
     notifySuccess(t('admin.resellerWithdraws.actions.rejectSuccess'))
     await fetchRows(pagination.value.page)
   } catch (err: any) {
@@ -148,6 +170,7 @@ const payWithdraw = async (row: AdminResellerWithdraw) => {
 }
 
 onMounted(() => {
+  initFiltersFromQuery()
   fetchRows()
 })
 </script>
@@ -169,9 +192,6 @@ onMounted(() => {
           </div>
           <div class="w-full md:w-32">
             <Input v-model="filters.userId" :placeholder="t('admin.resellerWithdraws.filters.userId')" @update:modelValue="debouncedSearch" />
-          </div>
-          <div class="w-full md:w-32">
-            <Input v-model="filters.currency" :placeholder="t('admin.resellerWithdraws.filters.currency')" @update:modelValue="debouncedSearch" />
           </div>
           <div class="w-full md:w-44">
             <Select v-model="filters.status" @update:modelValue="handleSearch">
@@ -265,7 +285,7 @@ onMounted(() => {
                     size="sm"
                     variant="outline"
                     :disabled="operating || item.status !== RESELLER_WITHDRAW_STATUS_PENDING"
-                    @click="rejectWithdraw(item)"
+                    @click="openRejectDialog(item)"
                   >
                     {{ t('admin.resellerWithdraws.actions.reject') }}
                   </Button>
@@ -293,5 +313,25 @@ onMounted(() => {
         />
       </div>
     </div>
+
+    <Dialog v-model:open="showRejectDialog">
+      <DialogScrollContent class="w-[calc(100vw-1rem)] max-w-md p-4 sm:p-6">
+        <DialogHeader>
+          <DialogTitle>{{ t('admin.resellerWithdraws.actions.reject') }} #{{ selectedWithdraw?.id || '-' }}</DialogTitle>
+        </DialogHeader>
+        <div class="space-y-4">
+          <div class="grid gap-2">
+            <Label>{{ t('admin.resellerWithdraws.actions.rejectReasonPrompt') }}</Label>
+            <Textarea v-model="rejectForm.reason" rows="4" />
+          </div>
+          <div class="flex justify-end gap-2">
+            <Button variant="outline" @click="showRejectDialog = false">{{ t('admin.common.cancel') }}</Button>
+            <Button variant="destructive" :disabled="operating" @click="rejectWithdraw">
+              {{ t('admin.resellerWithdraws.actions.reject') }}
+            </Button>
+          </div>
+        </div>
+      </DialogScrollContent>
+    </Dialog>
   </ComplianceGuardWrapper>
 </template>

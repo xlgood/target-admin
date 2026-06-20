@@ -2,6 +2,7 @@
 import { onMounted, reactive, ref } from 'vue'
 import { useDebounceFn } from '@vueuse/core'
 import { useI18n } from 'vue-i18n'
+import { useRoute } from 'vue-router'
 import { adminAPI } from '@/api/admin'
 import type {
   AdminResellerProductSetting,
@@ -36,6 +37,7 @@ import {
 } from '@/utils/resellerProductSettings'
 
 const { t } = useI18n()
+const route = useRoute()
 const loading = ref(true)
 const { refreshing, refreshList } = useListRefresh()
 const rows = ref<AdminResellerProductSetting[]>([])
@@ -61,6 +63,13 @@ const filters = reactive({
   pricingMode: '__all__',
   listed: '__all__',
 })
+
+const queryString = (value: unknown) => (Array.isArray(value) ? value[0] : value)
+
+const initFiltersFromQuery = () => {
+  const resellerId = String(queryString(route.query.reseller_id) || '').trim()
+  if (resellerId) filters.resellerId = resellerId
+}
 
 const pageSizeOptions = [10, 20, 50, 100]
 const pricingModes = [
@@ -284,6 +293,7 @@ const closeEditor = () => {
 }
 
 onMounted(() => {
+  initFiltersFromQuery()
   fetchRows()
 })
 </script>

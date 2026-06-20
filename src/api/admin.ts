@@ -15,9 +15,11 @@ import type {
   AdminUser,
   AdminSiteConnection,
   AdminResellerProfileApprovePayload,
+  AdminResellerProfileUpdatePayload,
   AdminResellerProductSettingUpdatePayload,
   AdminResellerReasonPayload,
   AdminResellerSiteConfigPayload,
+  AdminResellerSystemDomainPayload,
 } from './types'
 
 export interface CaptchaPayload {
@@ -440,6 +442,12 @@ export const adminAPI = {
     api.post(`/admin/resellers/withdraws/${id}/pay`, {}),
   getResellerProfiles: (params?: Record<string, unknown>) =>
     api.get('/admin/resellers/profiles', { params }),
+  getResellerProfile: (id: number) =>
+    api.get(`/admin/resellers/profiles/${id}`),
+  updateResellerProfile: (id: number, data: AdminResellerProfileUpdatePayload) =>
+    api.put(`/admin/resellers/profiles/${id}`, data),
+  assignResellerSystemDomain: (id: number, data: AdminResellerSystemDomainPayload) =>
+    api.put(`/admin/resellers/profiles/${id}/system-domain`, data),
   approveResellerProfile: (id: number, data: AdminResellerProfileApprovePayload) =>
     api.post(`/admin/resellers/profiles/${id}/approve`, data),
   rejectResellerProfile: (id: number, data: AdminResellerReasonPayload) =>
@@ -454,6 +462,8 @@ export const adminAPI = {
     api.post(`/admin/resellers/domains/${id}/approve`, {}),
   disableResellerDomain: (id: number) =>
     api.post(`/admin/resellers/domains/${id}/disable`, {}),
+  setPrimaryResellerDomain: (id: number) =>
+    api.post(`/admin/resellers/domains/${id}/set-primary`, {}),
   getResellerSiteConfigs: (params?: Record<string, unknown>) =>
     api.get('/admin/resellers/site-configs', { params }),
   getResellerSiteConfig: (resellerId: number) =>

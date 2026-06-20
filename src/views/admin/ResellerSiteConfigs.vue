@@ -2,6 +2,7 @@
 import { onMounted, reactive, ref } from 'vue'
 import { useDebounceFn } from '@vueuse/core'
 import { useI18n } from 'vue-i18n'
+import { useRoute } from 'vue-router'
 import { adminAPI } from '@/api/admin'
 import type {
   AdminResellerLocalizedText,
@@ -62,14 +63,10 @@ type ResellerSiteConfigForm = {
   nav_config: {
     builtin: Record<string, boolean>
   }
-  theme: {
-    primary_color: string
-    accent_color: string
-    surface_color: string
-  }
 }
 
 const { t, locale } = useI18n()
+const route = useRoute()
 const loading = ref(true)
 const { refreshing, refreshList } = useListRefresh()
 const saving = ref(false)
@@ -88,6 +85,13 @@ const filters = reactive({
   keyword: '',
   resellerId: '',
 })
+
+const queryString = (value: unknown) => (Array.isArray(value) ? value[0] : value)
+
+const initFiltersFromQuery = () => {
+  const resellerId = String(queryString(route.query.reseller_id) || '').trim()
+  if (resellerId) filters.resellerId = resellerId
+}
 
 const pageSizeOptions = [10, 20, 50, 100]
 const navBuiltinKeys = ['blog', 'notice', 'about']
@@ -122,11 +126,6 @@ const createBlankForm = (): ResellerSiteConfigForm => ({
       about: true,
     },
   },
-  theme: {
-    primary_color: '',
-    accent_color: '',
-    surface_color: '',
-  },
 })
 
 const form = reactive<ResellerSiteConfigForm>(createBlankForm())
@@ -148,7 +147,6 @@ const normalizeConfigForForm = (row: AdminResellerSiteConfig): ResellerSiteConfi
   const support = row.support || {}
   const seo = row.seo || {}
   const navConfig = row.nav_config || {}
-  const theme = row.theme || {}
   const builtin = {
     blog: navConfig.builtin?.blog !== false,
     notice: navConfig.builtin?.notice !== false,
@@ -179,11 +177,6 @@ const normalizeConfigForForm = (row: AdminResellerSiteConfig): ResellerSiteConfi
     },
     footer_links: normalizeFooterLinksForForm(row.footer_links),
     nav_config: { builtin },
-    theme: {
-      primary_color: String(theme.primary_color || ''),
-      accent_color: String(theme.accent_color || ''),
-      surface_color: String(theme.surface_color || ''),
-    },
   }
 }
 
@@ -222,11 +215,6 @@ const buildPayload = (): AdminResellerSiteConfigPayload => ({
       about: form.nav_config.builtin.about !== false,
     },
     custom_items: [],
-  },
-  theme: {
-    primary_color: form.theme.primary_color.trim(),
-    accent_color: form.theme.accent_color.trim(),
-    surface_color: form.theme.surface_color.trim(),
   },
 })
 
@@ -333,6 +321,7 @@ const resetConfig = async (row: AdminResellerSiteConfig) => {
 }
 
 onMounted(() => {
+  initFiltersFromQuery()
   fetchRows()
 })
 </script>
@@ -535,18 +524,12 @@ onMounted(() => {
           </section>
 
           <section class="space-y-4 rounded-lg border border-border p-4">
-            <h2 class="text-sm font-semibold text-foreground">{{ t('admin.resellerSiteConfigs.editor.sections.navTheme') }}</h2>
+            <h2 class="text-sm font-semibold text-foreground">{{ t('admin.resellerSiteConfigs.editor.sections.nav') }}</h2>
             <div class="grid gap-3">
               <div v-for="key in navBuiltinKeys" :key="key" class="flex items-center justify-between rounded-md border border-border px-3 py-2">
                 <span class="text-sm text-foreground">{{ t(`admin.resellerSiteConfigs.navItems.${key}`) }}</span>
                 <Switch v-model="form.nav_config.builtin[key]" />
               </div>
-              <Label>{{ t('admin.resellerSiteConfigs.fields.primaryColor') }}</Label>
-              <Input v-model="form.theme.primary_color" placeholder="#111827" />
-              <Label>{{ t('admin.resellerSiteConfigs.fields.accentColor') }}</Label>
-              <Input v-model="form.theme.accent_color" placeholder="#2563eb" />
-              <Label>{{ t('admin.resellerSiteConfigs.fields.surfaceColor') }}</Label>
-              <Input v-model="form.theme.surface_color" placeholder="#ffffff" />
             </div>
           </section>
         </div>

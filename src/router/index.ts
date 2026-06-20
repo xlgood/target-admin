@@ -221,6 +221,12 @@ const routes = [
         meta: { permission: 'GET:/admin/resellers/profiles' },
       },
       {
+        path: 'resellers/profiles/:id',
+        name: 'resellers-profile-detail',
+        component: () => import('@/views/admin/ResellerProfileDetail.vue'),
+        meta: { permission: 'GET:/admin/resellers/profiles/:id' },
+      },
+      {
         path: 'resellers/domains',
         name: 'resellers-domains',
         component: () => import('@/views/admin/ResellerDomains.vue'),
@@ -376,6 +382,7 @@ const PAYMENT_PROTECTED_ROUTE_NAMES = new Set<string>([
   'reconciliation',
   'affiliates-withdraws',
   'affiliates-commissions',
+  'resellers-operations',
   'resellers-ledger-entries',
   'resellers-balance-accounts',
   'resellers-withdraws',

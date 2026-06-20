@@ -14,12 +14,15 @@ import {
 } from '@/constants/reseller'
 import IdCell from '@/components/IdCell.vue'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogHeader, DialogScrollContent, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import TableSkeleton from '@/components/TableSkeleton.vue'
 import ListPagination from '@/components/ListPagination.vue'
 import { useListRefresh, type ListFetchOptions } from '@/composables/useListRefresh'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 import { confirmAction } from '@/utils/confirm'
 import { notifyError, notifySuccess } from '@/utils/notify'
 import { formatDate, toRFC3339 } from '@/utils/format'
@@ -29,6 +32,11 @@ const { t } = useI18n()
 const loading = ref(true)
 const { refreshing, refreshList } = useListRefresh()
 const operatingId = ref<number | null>(null)
+const selectedProfile = ref<AdminResellerProfile | null>(null)
+const showApproveDialog = ref(false)
+const showReasonDialog = ref(false)
+const showEditDialog = ref(false)
+const reasonAction = ref<'reject' | 'disable'>('reject')
 const rows = ref<AdminResellerProfile[]>([])
 const pagination = ref({
   page: 1,
@@ -50,6 +58,21 @@ const adminPath = import.meta.env.VITE_ADMIN_PATH || ''
 const pageSizeOptions = [10, 20, 50, 100]
 const normalizeFilterValue = (value: string) => (value === '__all__' ? '' : value)
 const userDetailLink = (userId: number) => `${adminPath}/users/${userId}`
+const profileDetailLink = (profileId: number) => `${adminPath}/resellers/profiles/${profileId}`
+
+const approveForm = reactive({
+  defaultMarkup: '0.00',
+  maxMarkup: '0.00',
+})
+const editForm = reactive({
+  defaultMarkup: '0.00',
+  maxMarkup: '0.00',
+  settlementStatus: RESELLER_SETTLEMENT_STATUS_NORMAL,
+  reason: '',
+})
+const reasonForm = reactive({
+  reason: '',
+})
 
 const fetchRows = async (page = 1, options: ListFetchOptions = {}) => {
   if (!options.preserveRows) loading.value = true
@@ -115,17 +138,38 @@ const settlementClass = (status?: string) => {
   return 'border-border bg-muted/30 text-muted-foreground'
 }
 
-const approveProfile = async (row: AdminResellerProfile) => {
-  const defaultMarkup = window.prompt(t('admin.resellerProfiles.actions.defaultMarkupPrompt'), row.default_markup_percent || '0.00')
-  if (defaultMarkup === null) return
-  const maxMarkup = window.prompt(t('admin.resellerProfiles.actions.maxMarkupPrompt'), row.max_markup_percent || '0.00')
-  if (maxMarkup === null) return
+const openApproveDialog = (row: AdminResellerProfile) => {
+  selectedProfile.value = row
+  approveForm.defaultMarkup = row.default_markup_percent || '0.00'
+  approveForm.maxMarkup = row.max_markup_percent || '0.00'
+  showApproveDialog.value = true
+}
+
+const validateMarkupRange = (defaultMarkup: string, maxMarkup: string) => {
+  const defaultValue = Number(defaultMarkup.trim() || '0')
+  const maxValue = Number(maxMarkup.trim() || '0')
+  if (!Number.isFinite(defaultValue) || !Number.isFinite(maxValue) || defaultValue < 0 || maxValue < 0) {
+    notifyError('加价比例必须是大于或等于 0 的数字')
+    return false
+  }
+  if (maxValue > 0 && defaultValue > maxValue) {
+    notifyError('默认加价比例不能大于封顶加价比例')
+    return false
+  }
+  return true
+}
+
+const submitApproveProfile = async () => {
+  const row = selectedProfile.value
+  if (!row) return
+  if (!validateMarkupRange(approveForm.defaultMarkup, approveForm.maxMarkup)) return
   operatingId.value = row.id
   try {
     await adminAPI.approveResellerProfile(row.id, {
-      default_markup_percent: defaultMarkup.trim() || '0.00',
-      max_markup_percent: maxMarkup.trim() || '0.00',
+      default_markup_percent: approveForm.defaultMarkup.trim() || '0.00',
+      max_markup_percent: approveForm.maxMarkup.trim() || '0.00',
     })
+    showApproveDialog.value = false
     notifySuccess(t('admin.resellerProfiles.actions.approveSuccess'))
     await fetchRows(pagination.value.page, { preserveRows: true })
   } catch (err: any) {
@@ -135,32 +179,64 @@ const approveProfile = async (row: AdminResellerProfile) => {
   }
 }
 
-const rejectProfile = async (row: AdminResellerProfile) => {
-  const reason = window.prompt(t('admin.resellerProfiles.actions.rejectReasonPrompt')) ?? ''
-  if (reason === '') return
+const openReasonDialog = (row: AdminResellerProfile, action: 'reject' | 'disable') => {
+  selectedProfile.value = row
+  reasonAction.value = action
+  reasonForm.reason = ''
+  showReasonDialog.value = true
+}
+
+const submitReasonAction = async () => {
+  const row = selectedProfile.value
+  if (!row) return
+  if (reasonAction.value === 'reject' && !reasonForm.reason.trim()) {
+    notifyError(t('admin.resellerProfiles.actions.rejectReasonPrompt'))
+    return
+  }
   operatingId.value = row.id
   try {
-    await adminAPI.rejectResellerProfile(row.id, { reason: reason.trim() })
-    notifySuccess(t('admin.resellerProfiles.actions.rejectSuccess'))
+    if (reasonAction.value === 'reject') {
+      await adminAPI.rejectResellerProfile(row.id, { reason: reasonForm.reason.trim() })
+      notifySuccess(t('admin.resellerProfiles.actions.rejectSuccess'))
+    } else {
+      await adminAPI.disableResellerProfile(row.id, { reason: reasonForm.reason.trim() || undefined })
+      notifySuccess(t('admin.resellerProfiles.actions.disableSuccess'))
+    }
+    showReasonDialog.value = false
     await fetchRows(pagination.value.page, { preserveRows: true })
   } catch (err: any) {
-    notifyError(err?.message || t('admin.resellerProfiles.actions.rejectFailed'))
+    notifyError(err?.message || (reasonAction.value === 'reject' ? t('admin.resellerProfiles.actions.rejectFailed') : t('admin.resellerProfiles.actions.disableFailed')))
   } finally {
     operatingId.value = null
   }
 }
 
-const disableProfile = async (row: AdminResellerProfile) => {
-  const confirmed = await confirmAction({ description: t('admin.resellerProfiles.actions.disableConfirm', { id: row.id }), variant: 'destructive' })
-  if (!confirmed) return
-  const reason = window.prompt(t('admin.resellerProfiles.actions.disableReasonPrompt')) ?? ''
+const openEditDialog = (row: AdminResellerProfile) => {
+  selectedProfile.value = row
+  editForm.defaultMarkup = row.default_markup_percent || '0.00'
+  editForm.maxMarkup = row.max_markup_percent || '0.00'
+  editForm.settlementStatus = row.settlement_status || RESELLER_SETTLEMENT_STATUS_NORMAL
+  editForm.reason = ''
+  showEditDialog.value = true
+}
+
+const submitEditProfile = async () => {
+  const row = selectedProfile.value
+  if (!row) return
+  if (!validateMarkupRange(editForm.defaultMarkup, editForm.maxMarkup)) return
   operatingId.value = row.id
   try {
-    await adminAPI.disableResellerProfile(row.id, { reason: reason.trim() || undefined })
-    notifySuccess(t('admin.resellerProfiles.actions.disableSuccess'))
+    await adminAPI.updateResellerProfile(row.id, {
+      default_markup_percent: editForm.defaultMarkup.trim() || '0.00',
+      max_markup_percent: editForm.maxMarkup.trim() || '0.00',
+      settlement_status: editForm.settlementStatus,
+      reason: editForm.reason.trim() || undefined,
+    })
+    showEditDialog.value = false
+    notifySuccess('分销商运营配置已更新')
     await fetchRows(pagination.value.page, { preserveRows: true })
   } catch (err: any) {
-    notifyError(err?.message || t('admin.resellerProfiles.actions.disableFailed'))
+    notifyError(err?.message || '保存分销商运营配置失败')
   } finally {
     operatingId.value = null
   }
@@ -300,8 +376,24 @@ onMounted(() => {
               <div class="flex flex-wrap items-center justify-end gap-2">
                 <Button
                   size="sm"
+                  variant="outline"
+                  as="a"
+                  :href="profileDetailLink(item.id)"
+                >
+                  详情
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  :disabled="operatingId === item.id"
+                  @click="openEditDialog(item)"
+                >
+                  编辑
+                </Button>
+                <Button
+                  size="sm"
                   :disabled="operatingId === item.id || !getResellerProfileActionState(item.status).canApprove"
-                  @click="approveProfile(item)"
+                  @click="openApproveDialog(item)"
                 >
                   {{ t('admin.resellerProfiles.actions.approve') }}
                 </Button>
@@ -309,7 +401,7 @@ onMounted(() => {
                   size="sm"
                   variant="outline"
                   :disabled="operatingId === item.id || !getResellerProfileActionState(item.status).canReject"
-                  @click="rejectProfile(item)"
+                  @click="openReasonDialog(item, 'reject')"
                 >
                   {{ t('admin.resellerProfiles.actions.reject') }}
                 </Button>
@@ -317,7 +409,7 @@ onMounted(() => {
                   size="sm"
                   variant="outline"
                   :disabled="operatingId === item.id || !getResellerProfileActionState(item.status).canDisable"
-                  @click="disableProfile(item)"
+                  @click="openReasonDialog(item, 'disable')"
                 >
                   {{ t('admin.resellerProfiles.actions.disable') }}
                 </Button>
@@ -345,5 +437,87 @@ onMounted(() => {
         @change-page-size="changePageSize"
       />
     </div>
+
+    <Dialog v-model:open="showApproveDialog">
+      <DialogScrollContent class="w-[calc(100vw-1rem)] max-w-md p-4 sm:p-6">
+        <DialogHeader>
+          <DialogTitle>审核通过分销商 R#{{ selectedProfile?.id || '-' }}</DialogTitle>
+        </DialogHeader>
+        <div class="space-y-4">
+          <div class="grid gap-2">
+            <Label>{{ t('admin.resellerProfiles.table.defaultMarkup') }}</Label>
+            <Input v-model="approveForm.defaultMarkup" inputmode="decimal" placeholder="0.00" />
+          </div>
+          <div class="grid gap-2">
+            <Label>{{ t('admin.resellerProfiles.table.maxMarkup') }}</Label>
+            <Input v-model="approveForm.maxMarkup" inputmode="decimal" placeholder="0.00" />
+            <p class="text-xs text-muted-foreground">填写 0 表示不限制封顶加价。</p>
+          </div>
+          <div class="flex justify-end gap-2">
+            <Button variant="outline" @click="showApproveDialog = false">取消</Button>
+            <Button :disabled="operatingId === selectedProfile?.id" @click="submitApproveProfile">确认通过</Button>
+          </div>
+        </div>
+      </DialogScrollContent>
+    </Dialog>
+
+    <Dialog v-model:open="showReasonDialog">
+      <DialogScrollContent class="w-[calc(100vw-1rem)] max-w-md p-4 sm:p-6">
+        <DialogHeader>
+          <DialogTitle>{{ reasonAction === 'reject' ? '拒绝分销商申请' : '禁用分销商' }} R#{{ selectedProfile?.id || '-' }}</DialogTitle>
+        </DialogHeader>
+        <div class="space-y-4">
+          <div class="grid gap-2">
+            <Label>{{ reasonAction === 'reject' ? t('admin.resellerProfiles.actions.rejectReasonPrompt') : t('admin.resellerProfiles.actions.disableReasonPrompt') }}</Label>
+            <Textarea v-model="reasonForm.reason" rows="4" />
+          </div>
+          <div class="flex justify-end gap-2">
+            <Button variant="outline" @click="showReasonDialog = false">取消</Button>
+            <Button :variant="reasonAction === 'disable' ? 'destructive' : 'default'" :disabled="operatingId === selectedProfile?.id" @click="submitReasonAction">
+              {{ reasonAction === 'reject' ? '确认拒绝' : '确认禁用' }}
+            </Button>
+          </div>
+        </div>
+      </DialogScrollContent>
+    </Dialog>
+
+    <Dialog v-model:open="showEditDialog">
+      <DialogScrollContent class="w-[calc(100vw-1rem)] max-w-lg p-4 sm:p-6">
+        <DialogHeader>
+          <DialogTitle>编辑分销商运营配置 R#{{ selectedProfile?.id || '-' }}</DialogTitle>
+        </DialogHeader>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div class="grid gap-2">
+            <Label>{{ t('admin.resellerProfiles.table.defaultMarkup') }}</Label>
+            <Input v-model="editForm.defaultMarkup" inputmode="decimal" placeholder="0.00" />
+          </div>
+          <div class="grid gap-2">
+            <Label>{{ t('admin.resellerProfiles.table.maxMarkup') }}</Label>
+            <Input v-model="editForm.maxMarkup" inputmode="decimal" placeholder="0.00" />
+          </div>
+          <div class="grid gap-2 sm:col-span-2">
+            <Label>{{ t('admin.resellerProfiles.table.settlement') }}</Label>
+            <Select v-model="editForm.settlementStatus">
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem :value="RESELLER_SETTLEMENT_STATUS_NORMAL">{{ t('admin.resellerProfiles.settlement.normal') }}</SelectItem>
+                <SelectItem :value="RESELLER_SETTLEMENT_STATUS_FROZEN">{{ t('admin.resellerProfiles.settlement.frozen') }}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div class="grid gap-2 sm:col-span-2">
+            <Label>操作原因</Label>
+            <Textarea v-model="editForm.reason" rows="3" />
+          </div>
+          <p class="text-xs text-muted-foreground sm:col-span-2">封顶加价填写 0 表示不限制封顶；这里只更新分销商运营配置，不处理余额冻结或手动调账。</p>
+          <div class="flex justify-end gap-2 sm:col-span-2">
+            <Button variant="outline" @click="showEditDialog = false">取消</Button>
+            <Button :disabled="operatingId === selectedProfile?.id" @click="submitEditProfile">保存配置</Button>
+          </div>
+        </div>
+      </DialogScrollContent>
+    </Dialog>
   </div>
 </template>

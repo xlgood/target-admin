@@ -873,14 +873,9 @@ export interface AdminResellerSiteConfigPayload {
       enabled?: boolean
     }>
   }
-  theme?: {
-    primary_color?: string
-    accent_color?: string
-    surface_color?: string
-  }
 }
 
-export interface AdminResellerSiteConfig extends Required<Pick<AdminResellerSiteConfigPayload, 'announcement' | 'support' | 'seo' | 'nav_config' | 'theme'>> {
+export interface AdminResellerSiteConfig extends Required<Pick<AdminResellerSiteConfigPayload, 'announcement' | 'support' | 'seo' | 'nav_config'>> {
   id: number
   reseller_id: number
   site_name: string
@@ -970,8 +965,89 @@ export interface AdminResellerProfileApprovePayload {
   max_markup_percent?: string
 }
 
+export interface AdminResellerProfileUpdatePayload {
+  default_markup_percent?: string
+  max_markup_percent?: string
+  settlement_status?: string
+  reason?: string
+}
+
+export interface AdminResellerSystemDomainPayload {
+  subdomain?: string
+  domain?: string
+}
+
 export interface AdminResellerReasonPayload {
   reason?: string
+}
+
+export interface AdminResellerProfileDetailOrder {
+  order_no: string
+  status: string
+  currency: string
+  total_amount: string | number
+  base_amount: string | number
+  profit_amount: string | number
+  profit_status: string
+  domain: string
+  buyer_label: string
+  items_count: number
+  created_at: string
+  paid_at?: string
+}
+
+export interface AdminResellerProfileDetailBalance {
+  id: number
+  currency: string
+  status: string
+  available_amount: string | number
+  locked_amount: string | number
+  negative_amount: string | number
+  updated_at: string
+}
+
+export interface AdminResellerProfileDetailLedger {
+  id: number
+  order_id?: number
+  type: string
+  amount: string | number
+  currency: string
+  status: string
+  available_at?: string
+  withdraw_request_id?: number
+  created_at: string
+}
+
+export interface AdminResellerProfileDetailWithdraw {
+  id: number
+  amount: string | number
+  currency: string
+  channel: string
+  account: string
+  status: string
+  reject_reason?: string
+  processed_at?: string
+  created_at: string
+}
+
+export interface AdminResellerProfileDetail {
+  profile: AdminResellerProfile
+  domains: AdminResellerDomain[]
+  site_config?: AdminResellerSiteConfig
+  product_summary: {
+    configured_products: number
+    hidden_products: number
+    sku_overrides: number
+    pricing_overrides: number
+  }
+  finance_summary: {
+    balances: AdminResellerProfileDetailBalance[]
+    recent_ledger_count: number
+    recent_withdraw_count: number
+  }
+  recent_orders: AdminResellerProfileDetailOrder[]
+  recent_ledger_entries: AdminResellerProfileDetailLedger[]
+  recent_withdraws: AdminResellerProfileDetailWithdraw[]
 }
 
 export interface AdminResellerOrderRef {
