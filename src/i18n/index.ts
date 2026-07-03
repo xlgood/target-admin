@@ -1955,6 +1955,7 @@ const messages = {
         targetTitle: '当前导出目标',
         targetHint: '未勾选删除时，导出的可用卡密会变成已用；勾选删除时会直接删除对应卡密。',
         batchCount: '批次数',
+        confirmTitle: '确认导出卡密',
         confirmUsed: '确认导出 {count} 条可用卡密，并标记为已用？',
         confirmDelete: '确认导出 {count} 条可用卡密，并直接删除这些库存行？该操作不可恢复。',
         errors: {
@@ -1964,6 +1965,15 @@ const messages = {
         success: {
           used: '已导出 {count} 条卡密，并标记为已用',
           deleted: '已导出 {count} 条卡密，并删除对应库存',
+        },
+        result: {
+          title: '导出结果',
+          filename: '文件名',
+          content: '卡密内容',
+          copy: '复制',
+          copied: '已复制到剪贴板',
+          download: '下载文件',
+          keepOpenHint: '导出内容会一直保留到你点击关闭，下载失败时可重新下载或复制。',
         },
       },
       giftCards: {
@@ -6167,6 +6177,7 @@ const messages = {
         targetTitle: '當前匯出目標',
         targetHint: '未勾選刪除時，匯出的可用卡密會變成已用；勾選刪除時會直接刪除對應卡密。',
         batchCount: '批次數',
+        confirmTitle: '確認匯出卡密',
         confirmUsed: '確認匯出 {count} 條可用卡密，並標記為已用？',
         confirmDelete: '確認匯出 {count} 條可用卡密，並直接刪除這些庫存列？此操作不可復原。',
         errors: {
@@ -6176,6 +6187,15 @@ const messages = {
         success: {
           used: '已匯出 {count} 條卡密，並標記為已用',
           deleted: '已匯出 {count} 條卡密，並刪除對應庫存',
+        },
+        result: {
+          title: '匯出結果',
+          filename: '檔案名稱',
+          content: '卡密內容',
+          copy: '複製',
+          copied: '已複製到剪貼簿',
+          download: '下載檔案',
+          keepOpenHint: '匯出內容會一直保留到你點擊關閉，下載失敗時可重新下載或複製。',
         },
       },
       giftCards: {
@@ -10379,6 +10399,7 @@ const messages = {
         targetTitle: 'Current Export Target',
         targetHint: 'Without delete, exported secrets become used. With delete checked, the corresponding secrets are removed directly.',
         batchCount: 'Batches',
+        confirmTitle: 'Confirm Export',
         confirmUsed: 'Export {count} available secrets and mark them as used?',
         confirmDelete: 'Export {count} available secrets and delete these stock rows directly? This cannot be undone.',
         errors: {
@@ -10388,6 +10409,15 @@ const messages = {
         success: {
           used: 'Exported {count} secrets and marked them as used',
           deleted: 'Exported {count} secrets and deleted corresponding stock',
+        },
+        result: {
+          title: 'Export Result',
+          filename: 'Filename',
+          content: 'Secret content',
+          copy: 'Copy',
+          copied: 'Copied to clipboard',
+          download: 'Download file',
+          keepOpenHint: 'The exported content stays here until you click Close. If download fails, you can retry or copy it.',
         },
       },
       giftCards: {
