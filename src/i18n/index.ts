@@ -491,6 +491,7 @@ const messages = {
         navigation: '导航菜单',
         collapseSidebar: '收起侧边栏',
         expandSidebar: '展开侧边栏',
+        homePage: '网站首页',
       },
       updateCheck: {
         button: '检测更新',
@@ -1401,6 +1402,8 @@ const messages = {
           wholesaleAll: '全部批发价',
           wholesaleEnabled: '有批发价',
           wholesaleDisabled: '无批发价',
+          categoryPlaceholder: '商品分类',
+          categoryAll: '全部分类',
         },
         stockStatus: {
           low: '库存不足',
@@ -4746,6 +4749,7 @@ const messages = {
         navigation: '導航選單',
         collapseSidebar: '收起側邊欄',
         expandSidebar: '展開側邊欄',
+        homePage: '網站首頁',
       },
       updateCheck: {
         button: '檢測更新',
@@ -5656,6 +5660,8 @@ const messages = {
           wholesaleAll: '全部批發價',
           wholesaleEnabled: '有批發價',
           wholesaleDisabled: '無批發價',
+          categoryPlaceholder: '商品分類',
+          categoryAll: '全部分類',
         },
         stockStatus: {
           low: '庫存不足',
@@ -9001,6 +9007,7 @@ const messages = {
         navigation: 'Navigation',
         collapseSidebar: 'Collapse sidebar',
         expandSidebar: 'Expand sidebar',
+        homePage: 'Home page',
       },
       updateCheck: {
         button: 'Check for updates',
@@ -9911,6 +9918,8 @@ const messages = {
           wholesaleAll: 'All wholesale pricing',
           wholesaleEnabled: 'With wholesale pricing',
           wholesaleDisabled: 'Without wholesale pricing',
+          categoryPlaceholder: 'Product category',
+          categoryAll: 'All categories',
         },
         stockStatus: {
           low: 'Low stock',
