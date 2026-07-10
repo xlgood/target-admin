@@ -548,6 +548,18 @@ export interface AdminSiteConnection {
   updated_at: string
 }
 
+export interface ProviderCatalogSyncResult {
+  fansgurus_pulled: number
+  tgx_pulled: number
+  supported_platforms?: string[]
+  filtered_telegram: number
+  filtered_inactive: number
+  filtered_platform: number
+  imported: number
+  skipped: number
+  deactivated: number
+}
+
 // --- ProductMapping ---
 export type UpstreamProductStatus = 'active' | 'inactive' | 'deleted'
 

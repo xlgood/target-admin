@@ -547,6 +547,8 @@ export const adminAPI = {
   pingSiteConnection: (id: number) => api.post(`/admin/site-connections/${id}/ping`),
   updateSiteConnectionStatus: (id: number, data: { is_active?: boolean; status?: string }) => api.put(`/admin/site-connections/${id}/status`, data),
   reapplyConnectionMarkup: (id: number) => api.post(`/admin/site-connections/${id}/reapply-markup`),
+  syncProviderCatalog: (data: { fansgurus_connection_id: number; tgx_connection_id: number }) =>
+    api.post('/admin/provider-catalog/sync', data),
   // Product Mappings
   getProductMappings: (params?: Record<string, unknown>) => api.get('/admin/product-mappings', { params }),
   getProductMapping: (id: number) => api.get(`/admin/product-mappings/${id}`),
@@ -567,6 +569,7 @@ export const adminAPI = {
   getProcurementOrder: (id: number) => api.get(`/admin/procurement-orders/${id}`),
   downloadProcurementUpstreamPayload: (id: number) => api.get(`/admin/procurement-orders/${id}/upstream-payload/download`, { blob: true }),
   retryProcurementOrder: (id: number) => api.post(`/admin/procurement-orders/${id}/retry`),
+  syncProcurementOrderStatus: (id: number) => api.post(`/admin/procurement-orders/${id}/sync-status`),
   cancelProcurementOrder: (id: number) => api.post(`/admin/procurement-orders/${id}/cancel`),
 
   // 对账管理

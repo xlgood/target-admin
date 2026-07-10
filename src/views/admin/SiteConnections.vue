@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { adminAPI } from '@/api/admin'
-import type { AdminSiteConnection } from '@/api/types'
+import { useAdminAuthStore } from '@/stores/auth'
+import type { AdminSiteConnection, ProviderCatalogSyncResult } from '@/api/types'
 import IdCell from '@/components/IdCell.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,6 +17,7 @@ import { notifyError, notifySuccess } from '@/utils/notify'
 import { useFormValidation, rules } from '@/composables/useFormValidation'
 
 const { t } = useI18n()
+const authStore = useAdminAuthStore()
 const loading = ref(true)
 const connections = ref<AdminSiteConnection[]>([])
 const pagination = reactive({
@@ -28,6 +30,7 @@ const showModal = ref(false)
 const isEditing = ref(false)
 const editingId = ref<number | null>(null)
 const pingingId = ref<number | null>(null)
+const syncingProviderCatalog = ref(false)
 
 const form = reactive({
   name: '',
@@ -44,6 +47,7 @@ const form = reactive({
   auto_sync_price: 'false',
 })
 const reapplyingId = ref<number | null>(null)
+const canSyncProviderCatalog = computed(() => authStore.hasPermission('POST:/admin/provider-catalog/sync'))
 
 const siteConnectionSchema = {
   name: [rules.required()],
@@ -244,6 +248,47 @@ const handleReapplyMarkup = async (conn: AdminSiteConnection) => {
   }
 }
 
+const findConnectionByProtocol = (protocol: string) => {
+  return connections.value.find((conn) => conn.protocol === protocol)
+}
+
+const handleSyncProviderCatalog = async () => {
+  const fansConn = findConnectionByProtocol('fansgurus')
+  const tgxConn = findConnectionByProtocol('tgx-account')
+  if (!fansConn || !tgxConn) {
+    notifyError(t('siteConnections.providerCatalog.missingConnections'))
+    return
+  }
+
+  const confirmed = await confirmAction({
+    description: t('siteConnections.providerCatalog.confirm', {
+      fans: fansConn.name || `#${fansConn.id}`,
+      tgx: tgxConn.name || `#${tgxConn.id}`,
+    }),
+    confirmText: t('siteConnections.providerCatalog.action'),
+  })
+  if (!confirmed) return
+
+  syncingProviderCatalog.value = true
+  try {
+    const res = await adminAPI.syncProviderCatalog({
+      fansgurus_connection_id: fansConn.id,
+      tgx_connection_id: tgxConn.id,
+    })
+    const result = res.data.data as ProviderCatalogSyncResult | undefined
+    notifySuccess(t('siteConnections.providerCatalog.success', {
+      imported: result?.imported ?? 0,
+      filtered: (result?.filtered_telegram ?? 0) + (result?.filtered_inactive ?? 0) + (result?.filtered_platform ?? 0),
+      deactivated: result?.deactivated ?? 0,
+    }))
+    fetchConnections(pagination.page)
+  } catch (err: any) {
+    notifyError(err?.response?.data?.message || err?.message)
+  } finally {
+    syncingProviderCatalog.value = false
+  }
+}
+
 const statusBadgeClass = (status?: string) => {
   switch (status) {
     case 'active':
@@ -277,7 +322,18 @@ onMounted(() => {
   <div class="space-y-6">
     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <h1 class="text-2xl font-semibold">{{ t('siteConnections.title') }}</h1>
-      <Button class="w-full sm:w-auto" @click="openCreateModal">{{ t('siteConnections.createButton') }}</Button>
+      <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <Button
+          v-if="canSyncProviderCatalog"
+          variant="outline"
+          class="w-full sm:w-auto"
+          :disabled="loading || syncingProviderCatalog"
+          @click="handleSyncProviderCatalog"
+        >
+          {{ syncingProviderCatalog ? t('siteConnections.providerCatalog.syncing') : t('siteConnections.providerCatalog.action') }}
+        </Button>
+        <Button class="w-full sm:w-auto" @click="openCreateModal">{{ t('siteConnections.createButton') }}</Button>
+      </div>
     </div>
 
     <div class="rounded-xl border border-border bg-card overflow-x-auto">
@@ -401,6 +457,8 @@ onMounted(() => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="dujiao-next">dujiao-next</SelectItem>
+                  <SelectItem value="fansgurus">fansgurus</SelectItem>
+                  <SelectItem value="tgx-account">tgx-account</SelectItem>
                 </SelectContent>
               </Select>
             </div>

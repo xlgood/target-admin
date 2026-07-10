@@ -47,6 +47,19 @@ type ProcurementOrderWithRelations = AdminProcurementOrder & {
   upstream_currency?: string
 }
 
+type ProcurementDiagnosisKey =
+  | 'temporaryUnavailable'
+  | 'mappingProduct'
+  | 'mappingSku'
+  | 'manualForm'
+  | 'providerCode'
+  | 'credentials'
+  | 'connection'
+  | 'balance'
+  | 'stock'
+  | 'cancelUnsupported'
+  | 'unknown'
+
 const { t } = useI18n()
 const loading = ref(true)
 const { refreshing, refreshList } = useListRefresh()
@@ -71,6 +84,7 @@ const showDetail = ref(false)
 const detailOrder = ref<ProcurementOrderWithRelations | null>(null)
 const detailLoading = ref(false)
 const retryingId = ref<number | null>(null)
+const syncingId = ref<number | null>(null)
 const cancelingId = ref<number | null>(null)
 const procurementDownloading = ref(false)
 
@@ -254,6 +268,28 @@ const handleRetry = async (order: ProcurementOrderWithRelations) => {
   }
 }
 
+const handleSyncStatus = async (order: ProcurementOrderWithRelations) => {
+  const confirmed = await confirmAction({
+    description: t('procurement.actions.syncStatusConfirm', { id: order.id }),
+    confirmText: t('procurement.actions.syncStatus'),
+  })
+  if (!confirmed) return
+  syncingId.value = order.id
+  try {
+    await adminAPI.syncProcurementOrderStatus(order.id)
+    notifySuccess(t('procurement.actions.syncStatusSuccess'))
+    fetchOrders(pagination.page)
+    fetchStats()
+    if (showDetail.value && detailOrder.value?.id === order.id) {
+      openDetail(order)
+    }
+  } catch (err: any) {
+    notifyError(err?.response?.data?.message || err?.message)
+  } finally {
+    syncingId.value = null
+  }
+}
+
 const handleCancel = async (order: ProcurementOrderWithRelations) => {
   const confirmed = await confirmAction({
     description: t('procurement.actions.cancelConfirm', { id: order.id }),
@@ -410,8 +446,35 @@ const profitClass = (order: ProcurementOrderWithRelations) => {
   return parseFloat(p) >= 0 ? 'text-emerald-600' : 'text-red-600'
 }
 
+const procurementErrorDiagnosisKey = (message?: string): ProcurementDiagnosisKey => {
+  const raw = normalizeText(message).toLowerCase()
+  if (!raw) return 'unknown'
+  if (raw.includes('provider_submit_temporarily_unavailable')) return 'temporaryUnavailable'
+  if (raw.includes('no product mapping') || raw.includes('lookup product mapping')) return 'mappingProduct'
+  if (raw.includes('no sku mapping') || raw.includes('lookup sku mapping')) return 'mappingSku'
+  if (
+    raw.includes('fansgurus link is required')
+    || raw.includes('manual form required')
+    || raw.includes('manual form is required')
+    || raw.includes('missing manual form')
+    || raw.includes('invalid manual form')
+  ) return 'manualForm'
+  if (raw.includes('tgx shared code is required') || raw.includes('invalid fansgurus service id')) return 'providerCode'
+  if (raw.includes('decrypt tgx app key failed') || raw.includes('decrypt')) return 'credentials'
+  if (raw.includes('connection') && raw.includes('not found')) return 'connection'
+  if (raw.includes('unsupported provider protocol')) return 'connection'
+  if (raw.includes('balance') || raw.includes('insufficient') || raw.includes('not enough')) return 'balance'
+  if (raw.includes('product out of stock') || raw.includes('stock') || raw.includes('inventory') || raw.includes('sold out')) return 'stock'
+  if (raw.includes('procurement order cancel unsupported')) return 'cancelUnsupported'
+  return 'unknown'
+}
+
+const procurementErrorTitle = (message?: string) => t(`procurement.diagnostics.${procurementErrorDiagnosisKey(message)}.title`)
+const procurementErrorAction = (message?: string) => t(`procurement.diagnostics.${procurementErrorDiagnosisKey(message)}.action`)
+
 const canRetry = (status: string) => ['failed', 'rejected'].includes(status)
-const canCancel = (status: string) => ['pending', 'submitted', 'accepted', 'failed'].includes(status)
+const canSyncStatus = (status: string) => ['accepted'].includes(status)
+const canCancel = (status: string) => ['pending', 'failed', 'rejected'].includes(status)
 
 onMounted(() => {
   fetchConnections()
@@ -595,6 +658,16 @@ onMounted(() => {
                 {{ t('procurement.actions.retry') }}
               </Button>
               <Button
+                v-if="canSyncStatus(order.status)"
+                size="sm"
+                variant="outline"
+                class="h-7 text-xs"
+                :disabled="syncingId === order.id"
+                @click="handleSyncStatus(order)"
+              >
+                {{ syncingId === order.id ? t('procurement.actions.syncingStatus') : t('procurement.actions.syncStatus') }}
+              </Button>
+              <Button
                 v-if="canCancel(order.status)"
                 size="sm"
                 variant="ghost"
@@ -652,7 +725,13 @@ onMounted(() => {
             <svg class="mt-0.5 h-3.5 w-3.5 shrink-0 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
-            <span class="break-words text-xs text-red-700">{{ order.error_message }}</span>
+            <div class="min-w-0 space-y-1 text-xs">
+              <div class="font-semibold text-red-800">{{ procurementErrorTitle(order.error_message) }}</div>
+              <div class="break-words text-red-700">{{ procurementErrorAction(order.error_message) }}</div>
+              <div class="break-words font-mono text-[11px] text-red-600/80">
+                {{ t('procurement.diagnostics.raw') }}: {{ order.error_message }}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -857,10 +936,19 @@ onMounted(() => {
           <!-- Error detail -->
           <div v-if="detailOrder.error_message" class="rounded-lg border border-red-200 bg-red-50/50">
             <div class="border-b border-red-200 bg-red-50 px-4 py-2 text-xs font-semibold text-red-700 uppercase">
-              {{ t('procurement.columns.errorMessage') }}
+              {{ t('procurement.diagnostics.title') }}
             </div>
-            <div class="p-4 text-sm font-mono whitespace-pre-wrap break-all text-red-700">
-              {{ detailOrder.error_message }}
+            <div class="space-y-3 p-4 text-sm text-red-700">
+              <div>
+                <div class="font-semibold text-red-800">{{ procurementErrorTitle(detailOrder.error_message) }}</div>
+                <div class="mt-1 break-words">{{ procurementErrorAction(detailOrder.error_message) }}</div>
+              </div>
+              <div>
+                <div class="text-xs font-semibold uppercase text-red-700/80">{{ t('procurement.diagnostics.raw') }}</div>
+                <div class="mt-1 font-mono whitespace-pre-wrap break-all text-red-700/90">
+                  {{ detailOrder.error_message }}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -890,6 +978,15 @@ onMounted(() => {
               @click="handleRetry(detailOrder)"
             >
               {{ t('procurement.actions.retry') }}
+            </Button>
+            <Button
+              v-if="canSyncStatus(detailOrder.status)"
+              variant="outline"
+              class="w-full sm:w-auto"
+              :disabled="syncingId === detailOrder.id"
+              @click="handleSyncStatus(detailOrder)"
+            >
+              {{ syncingId === detailOrder.id ? t('procurement.actions.syncingStatus') : t('procurement.actions.syncStatus') }}
             </Button>
             <Button
               v-if="canCancel(detailOrder.status)"

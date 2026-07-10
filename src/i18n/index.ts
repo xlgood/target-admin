@@ -91,7 +91,11 @@ const messages = {
         cancel: '取消',
         cancelOrder: '取消采购单',
         retryConfirm: '确认重试采购单 #{id}？',
-        cancelConfirm: '确认取消采购单 #{id}？',
+        syncStatus: '同步状态',
+        syncingStatus: '同步中...',
+        syncStatusConfirm: '确认同步采购单 #{id} 的最新状态？',
+        syncStatusSuccess: '状态同步已完成',
+        cancelConfirm: '确认取消采购单 #{id}？仅未提交或失败的采购单可本地取消。',
         retrySuccess: '重试已提交',
         cancelSuccess: '取消成功',
       },
@@ -113,6 +117,54 @@ const messages = {
         timeline: '时间线',
         orderStatus: '订单状态',
         upstreamPayload: '上游响应',
+      },
+      diagnostics: {
+        title: '错误诊断',
+        raw: '原始信息',
+        temporaryUnavailable: {
+          title: '提交暂时不可用',
+          action: '建议稍后重试；若同类订单持续失败，请检查连接状态和服务可用性。',
+        },
+        mappingProduct: {
+          title: '商品映射缺失',
+          action: '请检查商品映射是否绑定了当前商品，并确认映射已启用。',
+        },
+        mappingSku: {
+          title: 'SKU 映射缺失',
+          action: '请检查 SKU 映射是否绑定了当前规格，并确认上游编码正确。',
+        },
+        manualForm: {
+          title: '提交表单配置异常',
+          action: '请检查商品表单字段、必填项和用户提交内容是否匹配。',
+        },
+        providerCode: {
+          title: '服务编码配置异常',
+          action: '请检查映射中的服务编码或共享编码是否填写正确。',
+        },
+        credentials: {
+          title: '连接凭证异常',
+          action: '请重新保存连接凭证，并确认加密密钥与运行环境一致。',
+        },
+        connection: {
+          title: '连接配置异常',
+          action: '请检查站点连接是否存在、协议是否支持、状态是否启用。',
+        },
+        balance: {
+          title: '余额或额度不足',
+          action: '请检查对应连接账户余额、额度或可用资源后再重试。',
+        },
+        stock: {
+          title: '库存不足或不可售',
+          action: '请检查对应服务库存、可售状态或更换可用 SKU。',
+        },
+        cancelUnsupported: {
+          title: '该订单不支持取消',
+          action: '已提交或已接受的采购单通常不能本地取消，可同步状态后继续处理。',
+        },
+        unknown: {
+          title: '未知错误',
+          action: '请查看原始信息、运行日志和连接配置后再决定是否重试。',
+        },
       },
       empty: '暂无采购单',
     },
@@ -298,6 +350,13 @@ const messages = {
         enable: '启用',
         disable: '禁用',
         reapplyMarkup: '重新应用加价',
+      },
+      providerCatalog: {
+        action: '同步 Provider 目录',
+        syncing: '同步中...',
+        missingConnections: '请先创建 fansgurus 和 tgx-account 两个连接',
+        confirm: '确认使用「{fans}」和「{tgx}」同步 Provider 商品目录？',
+        success: '同步完成：导入 {imported} 个，过滤 {filtered} 个，停用 {deactivated} 个',
       },
       ping: {
         success: 'Ping 成功',
@@ -4349,7 +4408,11 @@ const messages = {
         cancel: '取消',
         cancelOrder: '取消採購單',
         retryConfirm: '確認重試採購單 #{id}？',
-        cancelConfirm: '確認取消採購單 #{id}？',
+        syncStatus: '同步狀態',
+        syncingStatus: '同步中...',
+        syncStatusConfirm: '確認同步採購單 #{id} 的最新狀態？',
+        syncStatusSuccess: '狀態同步已完成',
+        cancelConfirm: '確認取消採購單 #{id}？僅未提交或失敗的採購單可本地取消。',
         retrySuccess: '重試已提交',
         cancelSuccess: '取消成功',
       },
@@ -4371,6 +4434,54 @@ const messages = {
         timeline: '時間線',
         orderStatus: '訂單狀態',
         upstreamPayload: '上游回應',
+      },
+      diagnostics: {
+        title: '錯誤診斷',
+        raw: '原始資訊',
+        temporaryUnavailable: {
+          title: '提交暫時不可用',
+          action: '建議稍後重試；若同類訂單持續失敗，請檢查連接狀態和服務可用性。',
+        },
+        mappingProduct: {
+          title: '商品映射缺失',
+          action: '請檢查商品映射是否綁定了目前商品，並確認映射已啟用。',
+        },
+        mappingSku: {
+          title: 'SKU 映射缺失',
+          action: '請檢查 SKU 映射是否綁定了目前規格，並確認上游編碼正確。',
+        },
+        manualForm: {
+          title: '提交表單配置異常',
+          action: '請檢查商品表單欄位、必填項和使用者提交內容是否匹配。',
+        },
+        providerCode: {
+          title: '服務編碼配置異常',
+          action: '請檢查映射中的服務編碼或共享編碼是否填寫正確。',
+        },
+        credentials: {
+          title: '連接憑證異常',
+          action: '請重新儲存連接憑證，並確認加密金鑰與執行環境一致。',
+        },
+        connection: {
+          title: '連接配置異常',
+          action: '請檢查站點連接是否存在、協議是否支援、狀態是否啟用。',
+        },
+        balance: {
+          title: '餘額或額度不足',
+          action: '請檢查對應連接帳戶餘額、額度或可用資源後再重試。',
+        },
+        stock: {
+          title: '庫存不足或不可售',
+          action: '請檢查對應服務庫存、可售狀態或更換可用 SKU。',
+        },
+        cancelUnsupported: {
+          title: '該訂單不支援取消',
+          action: '已提交或已接受的採購單通常不能本地取消，可同步狀態後繼續處理。',
+        },
+        unknown: {
+          title: '未知錯誤',
+          action: '請查看原始資訊、執行日誌和連接配置後再決定是否重試。',
+        },
       },
       empty: '暫無採購單',
     },
@@ -4556,6 +4667,13 @@ const messages = {
         enable: '啟用',
         disable: '停用',
         reapplyMarkup: '重新套用加價',
+      },
+      providerCatalog: {
+        action: '同步 Provider 目錄',
+        syncing: '同步中...',
+        missingConnections: '請先建立 fansgurus 和 tgx-account 兩個連接',
+        confirm: '確認使用「{fans}」和「{tgx}」同步 Provider 商品目錄？',
+        success: '同步完成：導入 {imported} 個，過濾 {filtered} 個，停用 {deactivated} 個',
       },
       ping: {
         success: 'Ping 成功',
@@ -8607,7 +8725,11 @@ const messages = {
         cancel: 'Cancel',
         cancelOrder: 'Cancel Procurement Order',
         retryConfirm: 'Retry procurement order #{id}?',
-        cancelConfirm: 'Cancel procurement order #{id}?',
+        syncStatus: 'Sync Status',
+        syncingStatus: 'Syncing...',
+        syncStatusConfirm: 'Sync latest status for procurement order #{id}?',
+        syncStatusSuccess: 'Status sync completed',
+        cancelConfirm: 'Cancel procurement order #{id}? Only unsubmitted or failed procurement orders can be canceled locally.',
         retrySuccess: 'Retry submitted',
         cancelSuccess: 'Canceled successfully',
       },
@@ -8629,6 +8751,54 @@ const messages = {
         timeline: 'Timeline',
         orderStatus: 'Order Status',
         upstreamPayload: 'Upstream Payload',
+      },
+      diagnostics: {
+        title: 'Error Diagnostics',
+        raw: 'Raw message',
+        temporaryUnavailable: {
+          title: 'Submit is temporarily unavailable',
+          action: 'Retry later. If similar orders keep failing, check the connection status and service availability.',
+        },
+        mappingProduct: {
+          title: 'Product mapping is missing',
+          action: 'Check whether the product mapping is bound to this product and enabled.',
+        },
+        mappingSku: {
+          title: 'SKU mapping is missing',
+          action: 'Check whether the SKU mapping is bound to this variant and uses the correct upstream code.',
+        },
+        manualForm: {
+          title: 'Submit form configuration issue',
+          action: 'Check product form fields, required fields, and the submitted customer data.',
+        },
+        providerCode: {
+          title: 'Service code configuration issue',
+          action: 'Check whether the service code or shared code in the mapping is correct.',
+        },
+        credentials: {
+          title: 'Connection credential issue',
+          action: 'Save the connection credentials again and confirm the encryption key matches the runtime environment.',
+        },
+        connection: {
+          title: 'Connection configuration issue',
+          action: 'Check whether the site connection exists, uses a supported protocol, and is enabled.',
+        },
+        balance: {
+          title: 'Balance or quota is insufficient',
+          action: 'Check the related connection account balance, quota, or available resources before retrying.',
+        },
+        stock: {
+          title: 'Stock is insufficient or unavailable',
+          action: 'Check service stock, sale status, or switch to an available SKU.',
+        },
+        cancelUnsupported: {
+          title: 'This order cannot be canceled',
+          action: 'Submitted or accepted procurement orders usually cannot be canceled locally. Sync status before continuing.',
+        },
+        unknown: {
+          title: 'Unknown error',
+          action: 'Review the raw message, runtime logs, and connection configuration before deciding whether to retry.',
+        },
       },
       empty: 'No procurement orders',
     },
@@ -8814,6 +8984,13 @@ const messages = {
         enable: 'Enable',
         disable: 'Disable',
         reapplyMarkup: 'Reapply Markup',
+      },
+      providerCatalog: {
+        action: 'Sync Provider Catalog',
+        syncing: 'Syncing...',
+        missingConnections: 'Create both fansgurus and tgx-account connections first',
+        confirm: 'Sync provider catalog with "{fans}" and "{tgx}"?',
+        success: 'Sync complete: imported {imported}, filtered {filtered}, deactivated {deactivated}',
       },
       ping: {
         success: 'Ping succeeded',
