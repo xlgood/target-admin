@@ -549,13 +549,14 @@ export interface AdminSiteConnection {
 }
 
 export interface ProviderCatalogSyncResult {
-  fansgurus_pulled: number
+  fans_gurus_pulled: number
   tgx_pulled: number
   supported_platforms?: string[]
   filtered_telegram: number
   filtered_inactive: number
   filtered_platform: number
   imported: number
+  updated: number
   skipped: number
   deactivated: number
 }

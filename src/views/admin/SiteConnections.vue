@@ -277,7 +277,10 @@ const handleSyncProviderCatalog = async () => {
     })
     const result = res.data.data as ProviderCatalogSyncResult | undefined
     notifySuccess(t('siteConnections.providerCatalog.success', {
+      pulled: (result?.fans_gurus_pulled ?? 0) + (result?.tgx_pulled ?? 0),
       imported: result?.imported ?? 0,
+      updated: result?.updated ?? 0,
+      skipped: result?.skipped ?? 0,
       filtered: (result?.filtered_telegram ?? 0) + (result?.filtered_inactive ?? 0) + (result?.filtered_platform ?? 0),
       deactivated: result?.deactivated ?? 0,
     }))

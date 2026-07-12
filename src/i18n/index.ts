@@ -356,7 +356,7 @@ const messages = {
         syncing: '同步中...',
         missingConnections: '请先创建 fansgurus 和 tgx-account 两个连接',
         confirm: '确认使用「{fans}」和「{tgx}」同步 Provider 商品目录？',
-        success: '同步完成：导入 {imported} 个，过滤 {filtered} 个，停用 {deactivated} 个',
+        success: '同步完成：拉取 {pulled} 个，新建 {imported} 个，更新 {updated} 个，跳过 {skipped} 个，过滤 {filtered} 个，停用 {deactivated} 个',
       },
       ping: {
         success: 'Ping 成功',
@@ -4673,7 +4673,7 @@ const messages = {
         syncing: '同步中...',
         missingConnections: '請先建立 fansgurus 和 tgx-account 兩個連接',
         confirm: '確認使用「{fans}」和「{tgx}」同步 Provider 商品目錄？',
-        success: '同步完成：導入 {imported} 個，過濾 {filtered} 個，停用 {deactivated} 個',
+        success: '同步完成：拉取 {pulled} 個，新增 {imported} 個，更新 {updated} 個，跳過 {skipped} 個，過濾 {filtered} 個，停用 {deactivated} 個',
       },
       ping: {
         success: 'Ping 成功',
@@ -8990,7 +8990,7 @@ const messages = {
         syncing: 'Syncing...',
         missingConnections: 'Create both fansgurus and tgx-account connections first',
         confirm: 'Sync provider catalog with "{fans}" and "{tgx}"?',
-        success: 'Sync complete: imported {imported}, filtered {filtered}, deactivated {deactivated}',
+        success: 'Sync complete: pulled {pulled}, created {imported}, updated {updated}, skipped {skipped}, filtered {filtered}, deactivated {deactivated}',
       },
       ping: {
         success: 'Ping succeeded',
