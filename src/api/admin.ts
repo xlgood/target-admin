@@ -548,7 +548,7 @@ export const adminAPI = {
   updateSiteConnectionStatus: (id: number, data: { is_active?: boolean; status?: string }) => api.put(`/admin/site-connections/${id}/status`, data),
   reapplyConnectionMarkup: (id: number) => api.post(`/admin/site-connections/${id}/reapply-markup`),
   syncProviderCatalog: (data: { fansgurus_connection_id: number; tgx_connection_id: number }) =>
-    api.post('/admin/provider-catalog/sync', data),
+    api.post('/admin/provider-catalog/sync', data, { timeout: 90000 }),
   // Product Mappings
   getProductMappings: (params?: Record<string, unknown>) => api.get('/admin/product-mappings', { params }),
   getProductMapping: (id: number) => api.get(`/admin/product-mappings/${id}`),
