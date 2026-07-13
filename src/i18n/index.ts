@@ -405,6 +405,11 @@ const messages = {
         success: '同步成功',
         failed: '同步失败',
       },
+      inventory: {
+        refresh: '刷新库存',
+        refreshing: '刷新中...',
+        refreshSuccess: '实时库存已刷新',
+      },
       batch: {
         selectAll: '全选',
         selected: '已选 {count} 项',
@@ -4723,6 +4728,11 @@ const messages = {
         success: '同步成功',
         failed: '同步失敗',
       },
+      inventory: {
+        refresh: '重新整理庫存',
+        refreshing: '重新整理中...',
+        refreshSuccess: '即時庫存已重新整理',
+      },
       batch: {
         selectAll: '全選',
         selected: '已選 {count} 項',
@@ -9040,6 +9050,11 @@ const messages = {
       sync: {
         success: 'Sync succeeded',
         failed: 'Sync failed',
+      },
+      inventory: {
+        refresh: 'Refresh Inventory',
+        refreshing: 'Refreshing...',
+        refreshSuccess: 'Real-time inventory refreshed',
       },
       batch: {
         selectAll: 'Select All',

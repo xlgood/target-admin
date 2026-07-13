@@ -34,6 +34,7 @@ const categoryOptions = computed(() => flattenAdminCategories(categories.value).
 const pagination = reactive({ page: 1, page_size: 20, total: 0, total_page: 1 })
 const filters = reactive({ connection_id: '__all__', upstream_status: '__all__', product_status: '__all__', search: '' })
 const syncingId = ref<number | null>(null)
+const refreshingInventoryId = ref<number | null>(null)
 
 // Expand detail
 const expandedMappingId = ref<number | null>(null)
@@ -217,6 +218,16 @@ const getConnectionExchangeRate = (connectionId: number): number => {
   return Number.isFinite(rate) && rate > 0 ? rate : 1
 }
 
+const getUpstreamCurrency = (mapping: AdminProductMapping) =>
+  String(mapping.provider || '').trim().toLowerCase() === 'tgx' ? 'CNY' : 'USD'
+
+const formatUpstreamStock = (stock: number | undefined) => {
+  const normalized = Number(stock ?? 0)
+  if (normalized < 0) return t('productMappings.import.unlimited')
+  if (normalized === 0) return t('productMappings.import.outOfStock')
+  return `${normalized}`
+}
+
 // 上游价格 × 汇率 = 本地币种等价
 const toLocalCurrency = (upstreamPrice: number, connectionId: number): number => {
   return upstreamPrice * getConnectionExchangeRate(connectionId)
@@ -362,6 +373,22 @@ const handleSync = async (mapping: AdminProductMapping) => {
   } catch (err: any) {
     notifyError(t('productMappings.sync.failed') + ': ' + (err?.response?.data?.message || err?.message || ''))
   } finally { syncingId.value = null }
+}
+
+const handleRefreshTGXInventory = async (mapping: AdminProductMapping) => {
+  refreshingInventoryId.value = mapping.id
+  try {
+    const wasExpanded = expandedMappingId.value === mapping.id
+    await adminAPI.refreshTGXMappingInventory(mapping.id)
+    notifySuccess(t('productMappings.inventory.refreshSuccess'))
+    await fetchMappings(pagination.page)
+    if (wasExpanded) {
+      const refreshed = mappings.value.find((item) => item.id === mapping.id)
+      if (refreshed) await toggleMappingExpand(refreshed)
+    }
+  } catch (err: any) {
+    notifyError(err?.response?.data?.message || err?.message)
+  } finally { refreshingInventoryId.value = null }
 }
 
 const handleToggleStatus = async (mapping: AdminProductMapping) => {
@@ -847,6 +874,16 @@ onMounted(() => { fetchConnections(); fetchCategories(); fetchMappings() })
               {{ syncingId === mapping.id ? t('productMappings.actions.syncing') : t('productMappings.actions.sync') }}
             </Button>
             <span v-else class="self-center text-xs text-muted-foreground">{{ t('productMappings.actions.catalogSyncRequired') }}</span>
+            <Button
+              v-if="String(mapping.provider || '').trim().toLowerCase() === 'tgx'"
+              size="sm"
+              variant="outline"
+              class="w-full sm:w-auto"
+              :disabled="refreshingInventoryId === mapping.id"
+              @click="handleRefreshTGXInventory(mapping)"
+            >
+              {{ refreshingInventoryId === mapping.id ? t('productMappings.inventory.refreshing') : t('productMappings.inventory.refresh') }}
+            </Button>
             <Button size="sm" variant="outline" class="w-full sm:w-auto" @click="handleToggleStatus(mapping)">
               {{ mapping.is_active ? t('productMappings.actions.disable') : t('productMappings.actions.enable') }}
             </Button>
@@ -874,9 +911,9 @@ onMounted(() => { fetchConnections(); fetchCategories(); fetchMappings() })
                     <th class="min-w-[160px] px-3 py-2.5 text-left font-medium">{{ t('productMappings.detail.skuCode') }}</th>
                     <th class="min-w-[220px] px-3 py-2.5 text-left font-medium">{{ t('productMappings.import.skuSpec') }}</th>
 					<th class="min-w-[200px] px-3 py-2.5 text-left font-medium">上游 SKU / Shared Code</th>
-                    <th class="min-w-[120px] px-3 py-2.5 text-right font-medium">{{ t('productMappings.detail.localPrice') }}</th>
+                    <th class="min-w-[120px] px-3 py-2.5 text-right font-medium">{{ t('productMappings.detail.localPrice') }} (USD)</th>
                     <th class="min-w-[120px] px-3 py-2.5 text-right font-medium">{{ t('productMappings.detail.upstreamPrice') }}</th>
-                    <th class="min-w-[120px] px-3 py-2.5 text-right font-medium">{{ t('productMappings.detail.costPrice') }}</th>
+                    <th class="min-w-[120px] px-3 py-2.5 text-right font-medium">{{ t('productMappings.detail.costPrice') }} (USD)</th>
                     <th class="min-w-[120px] px-3 py-2.5 text-center font-medium">{{ t('productMappings.detail.priceDiff') }}</th>
                     <th class="min-w-[120px] px-3 py-2.5 text-center font-medium">{{ t('productMappings.detail.upstreamStock') }}</th>
                     <th class="min-w-[120px] px-3 py-2.5 text-center font-medium">{{ t('productMappings.detail.upstreamActive') }}</th>
@@ -897,8 +934,7 @@ onMounted(() => { fetchConnections(); fetchCategories(); fetchMappings() })
                     <td class="min-w-[120px] px-3 py-2.5 text-right font-mono text-foreground">{{ sku.price_amount }}</td>
                     <td class="min-w-[120px] px-3 py-2.5 text-right font-mono">
                       <template v-if="skuMappingByLocalId[sku.id]">
-                        <span class="text-foreground">{{ skuMappingByLocalId[sku.id]?.upstream_price }}</span>
-                        <span v-if="getConnectionExchangeRate(mapping.connection_id) !== 1" class="ml-0.5 text-[10px] text-muted-foreground">&times;{{ getConnectionExchangeRate(mapping.connection_id) }}</span>
+                        <span class="text-foreground">{{ skuMappingByLocalId[sku.id]?.upstream_price }} {{ getUpstreamCurrency(mapping) }}</span>
                       </template>
                       <span v-else class="text-muted-foreground">-</span>
                     </td>
@@ -929,7 +965,7 @@ onMounted(() => { fetchConnections(); fetchCategories(); fetchMappings() })
                             ? 'text-emerald-700 bg-emerald-50'
                             : 'text-red-600 bg-red-50'"
                         >
-                          {{ (skuMappingByLocalId[sku.id]?.upstream_stock ?? 0) !== 0 ? ((skuMappingByLocalId[sku.id]?.upstream_stock ?? 0) < 0 ? t('productMappings.import.unlimited') : t('productMappings.import.inStock')) : t('productMappings.import.outOfStock') }}
+                          {{ formatUpstreamStock(skuMappingByLocalId[sku.id]?.upstream_stock) }}
                         </span>
                       </template>
                       <span v-else class="text-muted-foreground">-</span>

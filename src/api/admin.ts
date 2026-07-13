@@ -555,6 +555,7 @@ export const adminAPI = {
   importUpstreamProduct: (data: Record<string, unknown>) => api.post('/admin/product-mappings/import', data),
   batchImportUpstreamProducts: (data: Record<string, unknown>) => api.post('/admin/product-mappings/batch-import', data),
   syncProductMapping: (id: number) => api.post(`/admin/product-mappings/${id}/sync`),
+  refreshTGXMappingInventory: (id: number) => api.post(`/admin/product-mappings/${id}/tgx-inventory`),
   updateProductMappingStatus: (id: number, data: { is_active: boolean }) => api.put(`/admin/product-mappings/${id}/status`, data),
   deleteProductMapping: (id: number) => api.delete(`/admin/product-mappings/${id}`),
   batchSyncProductMappings: (ids: number[]) => api.post('/admin/product-mappings/batch-sync', { ids }),
