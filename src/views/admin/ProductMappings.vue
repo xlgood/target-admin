@@ -156,6 +156,11 @@ const getProviderLabel = (mapping: AdminProductMapping) => {
   return getConnectionName(mapping.connection_id)
 }
 
+const isProviderCatalogMapping = (mapping: AdminProductMapping) => {
+  const provider = String(mapping.provider || '').trim().toLowerCase()
+  return provider === 'fansgurus' || provider === 'tgx'
+}
+
 const getUpstreamReference = (mapping: AdminProductMapping) => {
   return String(mapping.upstream_product_code || '').trim() || String(mapping.upstream_product_id || '-')
 }
@@ -285,6 +290,10 @@ const allMappingsSelected = computed(() => {
   return mappings.value.every((m) => selectedMappingIds.value.has(m.id))
 })
 
+const selectedSyncableMappingIds = computed(() => mappings.value
+  .filter((mapping) => selectedMappingIds.value.has(mapping.id) && !isProviderCatalogMapping(mapping))
+  .map((mapping) => mapping.id))
+
 const toggleMappingSelect = (id: number) => {
   const next = new Set(selectedMappingIds.value)
   next.has(id) ? next.delete(id) : next.add(id)
@@ -298,7 +307,7 @@ const toggleAllMappings = () => {
 }
 
 const handleBatchSync = async () => {
-  const ids = Array.from(selectedMappingIds.value)
+  const ids = selectedSyncableMappingIds.value
   if (ids.length === 0) return
   batchOperating.value = true
   try {
@@ -747,7 +756,7 @@ onMounted(() => { fetchConnections(); fetchCategories(); fetchMappings() })
     <div v-if="selectedMappingIds.size > 0" class="flex flex-wrap items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3">
       <span class="text-sm font-medium">{{ t('productMappings.batch.selected', { count: selectedMappingIds.size }) }}</span>
       <div class="flex flex-wrap gap-2">
-        <Button size="sm" variant="outline" :disabled="batchOperating" @click="handleBatchSync">{{ t('productMappings.batch.sync') }}</Button>
+        <Button v-if="selectedSyncableMappingIds.length > 0" size="sm" variant="outline" :disabled="batchOperating" @click="handleBatchSync">{{ t('productMappings.batch.sync') }}</Button>
         <Button size="sm" variant="outline" :disabled="batchOperating" @click="handleBatchStatus(true)">{{ t('productMappings.batch.enable') }}</Button>
         <Button size="sm" variant="outline" :disabled="batchOperating" @click="handleBatchStatus(false)">{{ t('productMappings.batch.disable') }}</Button>
         <Button size="sm" variant="destructive" :disabled="batchOperating" @click="handleBatchDelete">{{ t('productMappings.batch.delete') }}</Button>
@@ -827,9 +836,17 @@ onMounted(() => { fetchConnections(); fetchCategories(); fetchMappings() })
 
           <!-- Actions -->
           <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-2 shrink-0" @click.stop>
-            <Button size="sm" variant="outline" class="w-full sm:w-auto" :disabled="syncingId === mapping.id" @click="handleSync(mapping)">
+            <Button
+              v-if="!isProviderCatalogMapping(mapping)"
+              size="sm"
+              variant="outline"
+              class="w-full sm:w-auto"
+              :disabled="syncingId === mapping.id"
+              @click="handleSync(mapping)"
+            >
               {{ syncingId === mapping.id ? t('productMappings.actions.syncing') : t('productMappings.actions.sync') }}
             </Button>
+            <span v-else class="self-center text-xs text-muted-foreground">{{ t('productMappings.actions.catalogSyncRequired') }}</span>
             <Button size="sm" variant="outline" class="w-full sm:w-auto" @click="handleToggleStatus(mapping)">
               {{ mapping.is_active ? t('productMappings.actions.disable') : t('productMappings.actions.enable') }}
             </Button>

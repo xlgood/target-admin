@@ -397,6 +397,7 @@ const messages = {
       actions: {
         sync: '同步',
         syncing: '同步中...',
+        catalogSyncRequired: '请在站点连接中同步目录',
         enable: '启用',
         disable: '禁用',
       },
@@ -4714,6 +4715,7 @@ const messages = {
       actions: {
         sync: '同步',
         syncing: '同步中...',
+        catalogSyncRequired: '請在站點連接中同步目錄',
         enable: '啟用',
         disable: '停用',
       },
@@ -9031,6 +9033,7 @@ const messages = {
       actions: {
         sync: 'Sync',
         syncing: 'Syncing...',
+        catalogSyncRequired: 'Sync from Site Connections',
         enable: 'Enable',
         disable: 'Disable',
       },
