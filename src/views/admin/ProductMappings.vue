@@ -42,6 +42,7 @@ const detailLoading = ref(false)
 interface SkuMapping {
   local_sku_id: number
   upstream_sku_id: number
+	upstream_sku_code?: string
   upstream_price: number
   upstream_stock: number
   upstream_is_active: boolean
@@ -157,6 +158,10 @@ const getProviderLabel = (mapping: AdminProductMapping) => {
 
 const getUpstreamReference = (mapping: AdminProductMapping) => {
   return String(mapping.upstream_product_code || '').trim() || String(mapping.upstream_product_id || '-')
+}
+
+const getUpstreamSKUReference = (localSKUID: number) => {
+  return String(skuMappingByLocalId.value[localSKUID]?.upstream_sku_code || '').trim() || '-'
 }
 
 const getCategoryOptionLabel = (category: AdminCategory) => {
@@ -845,11 +850,12 @@ onMounted(() => { fetchConnections(); fetchCategories(); fetchMappings() })
               {{ t('productMappings.detail.skuComparison') }}
             </h4>
             <div class="overflow-x-auto rounded-lg border border-border">
-              <table class="min-w-[860px] w-full text-xs">
+              <table class="min-w-[1020px] w-full text-xs">
                 <thead>
                   <tr class="bg-muted/50 text-muted-foreground">
                     <th class="min-w-[160px] px-3 py-2.5 text-left font-medium">{{ t('productMappings.detail.skuCode') }}</th>
                     <th class="min-w-[220px] px-3 py-2.5 text-left font-medium">{{ t('productMappings.import.skuSpec') }}</th>
+					<th class="min-w-[200px] px-3 py-2.5 text-left font-medium">上游 SKU / Shared Code</th>
                     <th class="min-w-[120px] px-3 py-2.5 text-right font-medium">{{ t('productMappings.detail.localPrice') }}</th>
                     <th class="min-w-[120px] px-3 py-2.5 text-right font-medium">{{ t('productMappings.detail.upstreamPrice') }}</th>
                     <th class="min-w-[120px] px-3 py-2.5 text-right font-medium">{{ t('productMappings.detail.costPrice') }}</th>
@@ -860,7 +866,7 @@ onMounted(() => { fetchConnections(); fetchCategories(); fetchMappings() })
                 </thead>
                 <tbody class="divide-y divide-border">
                   <tr v-if="!mapping.product?.skus?.length" >
-                    <td colspan="8" class="px-3 py-6 text-center text-muted-foreground">{{ t('productMappings.detail.noSkus') }}</td>
+					<td colspan="9" class="px-3 py-6 text-center text-muted-foreground">{{ t('productMappings.detail.noSkus') }}</td>
                   </tr>
                   <tr
                     v-for="sku in (mapping.product?.skus as AdminProductSKU[] | undefined) || []"
@@ -869,6 +875,7 @@ onMounted(() => { fetchConnections(); fetchCategories(); fetchMappings() })
                   >
                     <td class="min-w-[160px] px-3 py-2.5 font-mono text-muted-foreground break-all">{{ sku.sku_code }}</td>
                     <td class="min-w-[220px] px-3 py-2.5 text-foreground break-words">{{ formatSpecValues(sku.spec_values) }}</td>
+					<td class="min-w-[200px] px-3 py-2.5 font-mono text-foreground break-all">{{ getUpstreamSKUReference(sku.id) }}</td>
                     <td class="min-w-[120px] px-3 py-2.5 text-right font-mono text-foreground">{{ sku.price_amount }}</td>
                     <td class="min-w-[120px] px-3 py-2.5 text-right font-mono">
                       <template v-if="skuMappingByLocalId[sku.id]">
