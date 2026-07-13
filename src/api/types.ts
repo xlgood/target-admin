@@ -569,6 +569,9 @@ export interface AdminProductMapping {
   connection_id: number
   local_product_id: number
   upstream_product_id: number
+  upstream_product_code?: string
+  provider?: string
+  platform?: string
   upstream_sku_id: number
   upstream_product_name: string
   upstream_sku_name: string

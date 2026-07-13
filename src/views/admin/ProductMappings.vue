@@ -148,6 +148,17 @@ const getConnectionName = (connectionId: number) => {
   return conn?.name || `#${connectionId}`
 }
 
+const getProviderLabel = (mapping: AdminProductMapping) => {
+  const provider = String(mapping.provider || '').trim().toLowerCase()
+  if (provider === 'fansgurus') return 'FansGurus'
+  if (provider === 'tgx') return 'TGX Account'
+  return getConnectionName(mapping.connection_id)
+}
+
+const getUpstreamReference = (mapping: AdminProductMapping) => {
+  return String(mapping.upstream_product_code || '').trim() || String(mapping.upstream_product_id || '-')
+}
+
 const getCategoryOptionLabel = (category: AdminCategory) => {
   return buildAdminCategoryPath(category, categoryMap.value, (item) => getLocalizedText(item.name))
 }
@@ -800,8 +811,8 @@ onMounted(() => { fetchConnections(); fetchCategories(); fetchMappings() })
               </span>
             </div>
             <div class="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-              <span>{{ t('productMappings.columns.connection') }}: <span class="text-foreground">{{ getConnectionName(mapping.connection_id) }}</span></span>
-              <span>{{ t('productMappings.detail.upstreamId') }}: <span class="font-mono text-foreground">{{ mapping.upstream_product_id }}</span></span>
+              <span>{{ t('productMappings.columns.connection') }}: <span class="text-foreground">{{ getProviderLabel(mapping) }}</span></span>
+              <span>{{ t('productMappings.detail.upstreamId') }}: <span class="font-mono text-foreground">{{ getUpstreamReference(mapping) }}</span></span>
               <span>{{ t('productMappings.detail.localPrice') }}: <span class="font-mono text-foreground">{{ getLocalPriceRange(mapping) }}</span></span>
               <span>SKU: <span class="text-foreground">{{ getLocalSkuCount(mapping) }}</span></span>
               <span>{{ t('productMappings.columns.lastSynced') }}: {{ formatTime((mapping.last_synced_at ?? mapping.last_sync_at) as string | undefined) }}</span>
