@@ -208,7 +208,8 @@ const skuMappingByLocalId = computed(() => {
 
 const getConnectionExchangeRate = (connectionId: number): number => {
   const conn = connections.value.find((c) => c.id === connectionId)
-  return conn?.exchange_rate || 1
+  const rate = Number(conn?.exchange_rate)
+  return Number.isFinite(rate) && rate > 0 ? rate : 1
 }
 
 // 上游价格 × 汇率 = 本地币种等价
