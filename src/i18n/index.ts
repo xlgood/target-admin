@@ -409,6 +409,7 @@ const messages = {
         refresh: '刷新库存',
         refreshing: '刷新中...',
         refreshSuccess: '实时库存已刷新',
+		pending: '待刷新',
       },
       batch: {
         selectAll: '全选',
@@ -1493,6 +1494,7 @@ const messages = {
         },
         stock: {
           unlimited: '库存不限',
+		  upstreamPending: '上游库存待刷新',
           manualSummary: '剩余 {remaining} · 锁定 {locked} · 已售 {sold}',
           summary: '库存 {available}/{total} · 锁定 {locked} · 已售 {sold}',
         },
@@ -4732,6 +4734,7 @@ const messages = {
         refresh: '重新整理庫存',
         refreshing: '重新整理中...',
         refreshSuccess: '即時庫存已重新整理',
+		pending: '待重新整理',
       },
       batch: {
         selectAll: '全選',
@@ -5816,6 +5819,7 @@ const messages = {
         },
         stock: {
           unlimited: '庫存不限',
+		  upstreamPending: '上游庫存待重新整理',
           manualSummary: '剩餘 {remaining} · 鎖定 {locked} · 已售 {sold}',
           summary: '庫存 {available}/{total} · 鎖定 {locked} · 已售 {sold}',
         },
@@ -9055,6 +9059,7 @@ const messages = {
         refresh: 'Refresh Inventory',
         refreshing: 'Refreshing...',
         refreshSuccess: 'Real-time inventory refreshed',
+		pending: 'Pending refresh',
       },
       batch: {
         selectAll: 'Select All',
@@ -10139,6 +10144,7 @@ const messages = {
         },
         stock: {
           unlimited: 'Unlimited stock',
+		  upstreamPending: 'Upstream inventory pending refresh',
           manualSummary: 'Remaining {remaining} · Locked {locked} · Sold {sold}',
           summary: 'Stock {available}/{total} · Locked {locked} · Sold {sold}',
         },

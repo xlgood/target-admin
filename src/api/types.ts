@@ -79,6 +79,7 @@ export interface AdminProduct {
   auto_stock_total: number
   auto_stock_locked: number
   auto_stock_sold: number
+  upstream_stock_unknown?: boolean
   is_mapped: boolean
   is_active: boolean
   sort_order: number

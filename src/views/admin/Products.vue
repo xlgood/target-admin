@@ -176,7 +176,10 @@ const resolveManualStockMetrics = (product: AdminProduct) => {
 }
 
 const formatManualStockSummary = (product: AdminProduct) => {
-  const metrics = resolveManualStockMetrics(product)
+	if (product?.upstream_stock_unknown) {
+		return t('admin.products.stock.upstreamPending')
+	}
+	const metrics = resolveManualStockMetrics(product)
   const total = metrics.total
   if (total === -1) {
     return t('admin.products.stock.unlimited')
@@ -211,7 +214,10 @@ const fulfillmentTypeBadgeClass = (product: AdminProduct) => {
 }
 
 const manualStockBadgeClass = (product: AdminProduct) => {
-  const total = resolveManualStockMetrics(product).total
+	if (product?.upstream_stock_unknown) {
+		return 'border-amber-200 bg-amber-50 text-amber-700'
+	}
+	const total = resolveManualStockMetrics(product).total
   if (total === -1) {
     return 'border-zinc-200 bg-zinc-50 text-zinc-700'
   }
@@ -222,7 +228,10 @@ const manualStockBadgeClass = (product: AdminProduct) => {
 }
 
 const autoStockBadgeClass = (product: AdminProduct) => {
-  if (Number(product?.auto_stock_available) === -1) {
+	if (product?.upstream_stock_unknown) {
+		return 'border-amber-200 bg-amber-50 text-amber-700'
+	}
+	if (Number(product?.auto_stock_available) === -1) {
     return 'border-zinc-200 bg-zinc-50 text-zinc-700'
   }
   const available = toSafeInt(product?.auto_stock_available)

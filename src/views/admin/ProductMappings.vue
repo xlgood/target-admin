@@ -47,6 +47,7 @@ interface SkuMapping {
   upstream_price: number
   upstream_stock: number
   upstream_is_active: boolean
+	stock_synced_at?: string | null
 }
 
 interface MappingDetail {
@@ -221,8 +222,9 @@ const getConnectionExchangeRate = (connectionId: number): number => {
 const getUpstreamCurrency = (mapping: AdminProductMapping) =>
   String(mapping.provider || '').trim().toLowerCase() === 'tgx' ? 'CNY' : 'USD'
 
-const formatUpstreamStock = (stock: number | undefined) => {
+const formatUpstreamStock = (stock: number | undefined, syncedAt?: string | null, provider?: string) => {
   const normalized = Number(stock ?? 0)
+	if (String(provider || '').toLowerCase() === 'tgx' && normalized < 0 && !syncedAt) return t('productMappings.inventory.pending')
   if (normalized < 0) return t('productMappings.import.unlimited')
   if (normalized === 0) return t('productMappings.import.outOfStock')
   return `${normalized}`
@@ -961,11 +963,13 @@ onMounted(() => { fetchConnections(); fetchCategories(); fetchMappings() })
                       <template v-if="skuMappingByLocalId[sku.id]">
                         <span
                           class="inline-flex rounded-full px-1.5 py-0.5 text-[10px]"
-                          :class="(skuMappingByLocalId[sku.id]?.upstream_stock ?? 0) !== 0
+                          :class="String(mapping.provider || '').toLowerCase() === 'tgx' && (skuMappingByLocalId[sku.id]?.upstream_stock ?? 0) < 0 && !skuMappingByLocalId[sku.id]?.stock_synced_at
+                            ? 'text-amber-700 bg-amber-50'
+                            : (skuMappingByLocalId[sku.id]?.upstream_stock ?? 0) !== 0
                             ? 'text-emerald-700 bg-emerald-50'
                             : 'text-red-600 bg-red-50'"
                         >
-                          {{ formatUpstreamStock(skuMappingByLocalId[sku.id]?.upstream_stock) }}
+                          {{ formatUpstreamStock(skuMappingByLocalId[sku.id]?.upstream_stock, skuMappingByLocalId[sku.id]?.stock_synced_at, mapping.provider) }}
                         </span>
                       </template>
                       <span v-else class="text-muted-foreground">-</span>
