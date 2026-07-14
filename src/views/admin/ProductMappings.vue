@@ -3,7 +3,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useDebounceFn } from '@vueuse/core'
 import { adminAPI } from '@/api/admin'
-import type { AdminProductMapping, AdminSiteConnection, AdminCategory, AdminProduct, AdminProductSKU } from '@/api/types'
+import type { AdminProductMapping, AdminSiteConnection, AdminCategory, AdminProduct, AdminProductSKU, AdminTGXInventorySyncRun } from '@/api/types'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Switch } from '@/components/ui/switch'
@@ -32,9 +32,12 @@ const categoryOptions = computed(() => flattenAdminCategories(categories.value).
   selectable: isAdminProductCategorySelectable(item.category, categoryChildCountMap.value),
 })))
 const pagination = reactive({ page: 1, page_size: 20, total: 0, total_page: 1 })
-const filters = reactive({ connection_id: '__all__', upstream_status: '__all__', product_status: '__all__', search: '' })
+const filters = reactive({ connection_id: '__all__', upstream_status: '__all__', product_status: '__all__', review_status: '__all__', search: '' })
 const syncingId = ref<number | null>(null)
 const refreshingInventoryId = ref<number | null>(null)
+const correctingPlatformId = ref<number | null>(null)
+const tgxInventoryHealth = ref<AdminTGXInventorySyncRun | null>(null)
+const platformChoices = ['x', 'instagram', 'facebook', 'tiktok', 'youtube', 'vk', 'spotify', 'discord', 'twitch', 'reddit', 'linkedin', 'github', 'quora', 'whatsapp', 'line-voom', 'threads', 'gmail', 'outlook', 'hotmail', 'overseas-email']
 
 // Expand detail
 const expandedMappingId = ref<number | null>(null)
@@ -260,11 +263,13 @@ const fetchMappings = async (page = 1, options: ListFetchOptions = {}) => {
     const connId = normalizeFilterValue(filters.connection_id)
     const us = normalizeFilterValue(filters.upstream_status)
     const ps = normalizeFilterValue(filters.product_status)
+    const rs = normalizeFilterValue(filters.review_status)
     const res = await adminAPI.getProductMappings({
       page, page_size: pagination.page_size,
       connection_id: connId || undefined,
       upstream_status: us || undefined,
       product_status: ps || undefined,
+      review_status: rs || undefined,
       search: filters.search || undefined,
     })
     mappings.value = (res.data.data as (AdminProductMapping & { product?: AdminProduct })[]) || []
@@ -275,6 +280,19 @@ const fetchMappings = async (page = 1, options: ListFetchOptions = {}) => {
   } finally {
     if (!options.preserveRows) loading.value = false
   }
+}
+
+const loadTGXInventoryHealth = async () => {
+  const connectionId = normalizeFilterValue(filters.connection_id)
+  const connection = connections.value.find((item) => String(item.id) === connectionId)
+  if (connectionId && (!connection || connection.protocol !== 'tgx-account')) {
+    tgxInventoryHealth.value = null
+    return
+  }
+  try {
+    const response = await adminAPI.getTGXInventorySyncHealth(connection ? { connection_id: connection.id } : undefined)
+    tgxInventoryHealth.value = response.data.data as AdminTGXInventorySyncRun | null
+  } catch { tgxInventoryHealth.value = null }
 }
 
 const refresh = () => {
@@ -291,7 +309,7 @@ const changePageSize = (size: number) => {
   fetchMappings(1)
 }
 
-const handleFilterChange = () => fetchMappings(1)
+const handleFilterChange = () => { fetchMappings(1); loadTGXInventoryHealth() }
 const debouncedSearch = useDebounceFn(() => fetchMappings(1), 300)
 
 // --- Batch selection ---
@@ -305,6 +323,9 @@ const allMappingsSelected = computed(() => {
 
 const selectedSyncableMappingIds = computed(() => mappings.value
   .filter((mapping) => selectedMappingIds.value.has(mapping.id) && !isProviderCatalogMapping(mapping))
+  .map((mapping) => mapping.id))
+const selectedPendingProviderIds = computed(() => mappings.value
+  .filter((mapping) => selectedMappingIds.value.has(mapping.id) && isProviderCatalogMapping(mapping) && mapping.catalog_review_status !== 'approved')
   .map((mapping) => mapping.id))
 
 const toggleMappingSelect = (id: number) => {
@@ -340,6 +361,19 @@ const handleBatchStatus = async (isActive: boolean) => {
     const res = await adminAPI.batchUpdateProductMappingStatus(ids, isActive)
     const data = res.data.data as { success_count?: number } | null
     notifySuccess(t('productMappings.batch.statusResult', { success: data?.success_count || 0, total: ids.length }))
+    selectedMappingIds.value = new Set()
+    fetchMappings(pagination.page)
+  } catch (err: any) { notifyError(err?.response?.data?.message || err?.message) } finally { batchOperating.value = false }
+}
+
+const handleBatchApprove = async () => {
+  const ids = selectedPendingProviderIds.value
+  if (ids.length === 0) return
+  batchOperating.value = true
+  try {
+    const res = await adminAPI.batchApproveProviderCatalogMappings(ids)
+    const data = res.data.data as { success_count?: number } | null
+    notifySuccess(`已审核并上架 ${data?.success_count || 0}/${ids.length} 个目录商品`)
     selectedMappingIds.value = new Set()
     fetchMappings(pagination.page)
   } catch (err: any) { notifyError(err?.response?.data?.message || err?.message) } finally { batchOperating.value = false }
@@ -388,9 +422,20 @@ const handleRefreshTGXInventory = async (mapping: AdminProductMapping) => {
       const refreshed = mappings.value.find((item) => item.id === mapping.id)
       if (refreshed) await toggleMappingExpand(refreshed)
     }
+		loadTGXInventoryHealth()
   } catch (err: any) {
     notifyError(err?.response?.data?.message || err?.message)
   } finally { refreshingInventoryId.value = null }
+}
+
+const handleCorrectPlatform = async (mapping: AdminProductMapping, platform: string) => {
+  if (!platform || platform === mapping.platform) return
+  correctingPlatformId.value = mapping.id
+  try {
+    await adminAPI.correctProviderCatalogPlatform(mapping.id, platform)
+    notifySuccess('平台已纠正，并已更新分类与共用图片')
+    fetchMappings(pagination.page)
+  } catch (err: any) { notifyError(err?.response?.data?.message || err?.message) } finally { correctingPlatformId.value = null }
 }
 
 const handleToggleStatus = async (mapping: AdminProductMapping) => {
@@ -720,7 +765,7 @@ const handleBatchImport = async () => {
   } catch (err: any) { notifyError(err?.response?.data?.message || err?.message) } finally { importing.value = false }
 }
 
-onMounted(() => { fetchConnections(); fetchCategories(); fetchMappings() })
+onMounted(async () => { await fetchConnections(); fetchCategories(); fetchMappings(); loadTGXInventoryHealth() })
 </script>
 
 <template>
@@ -778,7 +823,26 @@ onMounted(() => { fetchConnections(); fetchCategories(); fetchMappings() })
             <SelectItem value="inactive">{{ t('productMappings.filter.productInactive') }}</SelectItem>
           </SelectContent>
         </Select>
+        <Select v-model="filters.review_status" @update:modelValue="handleFilterChange">
+          <SelectTrigger class="h-9 w-full sm:w-[160px]">
+            <SelectValue placeholder="审核状态" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__">全部审核状态</SelectItem>
+            <SelectItem value="pending">待审核</SelectItem>
+            <SelectItem value="approved">已审核</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
+    </div>
+
+    <div v-if="tgxInventoryHealth" class="rounded-xl border px-4 py-3 text-sm" :class="tgxInventoryHealth.failed > 0 ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800'">
+      <span class="font-medium">TGX 最近库存同步：</span>
+      {{ tgxInventoryHealth.succeeded }}/{{ tgxInventoryHealth.total }} 成功，失败 {{ tgxInventoryHealth.failed }}，{{ formatTime(tgxInventoryHealth.finished_at) }}。
+      <span v-if="tgxInventoryHealth.failed > 0" class="ml-1">失败 SKU 明细已记录；请在同步监控中处理。</span>
+			<div v-if="tgxInventoryHealth.failed_details?.items?.length" class="mt-2 max-h-28 overflow-y-auto rounded border border-amber-200/70 bg-white/60 p-2 font-mono text-xs">
+				<div v-for="item in tgxInventoryHealth.failed_details.items" :key="item.sku_mapping_id">{{ item.upstream_sku_code }}: {{ item.error }}</div>
+			</div>
     </div>
 
     <!-- Batch action bar -->
@@ -786,6 +850,7 @@ onMounted(() => { fetchConnections(); fetchCategories(); fetchMappings() })
       <span class="text-sm font-medium">{{ t('productMappings.batch.selected', { count: selectedMappingIds.size }) }}</span>
       <div class="flex flex-wrap gap-2">
         <Button v-if="selectedSyncableMappingIds.length > 0" size="sm" variant="outline" :disabled="batchOperating" @click="handleBatchSync">{{ t('productMappings.batch.sync') }}</Button>
+        <Button v-if="selectedPendingProviderIds.length > 0" size="sm" :disabled="batchOperating" @click="handleBatchApprove">审核并上架</Button>
         <Button size="sm" variant="outline" :disabled="batchOperating" @click="handleBatchStatus(true)">{{ t('productMappings.batch.enable') }}</Button>
         <Button size="sm" variant="outline" :disabled="batchOperating" @click="handleBatchStatus(false)">{{ t('productMappings.batch.disable') }}</Button>
         <Button size="sm" variant="destructive" :disabled="batchOperating" @click="handleBatchDelete">{{ t('productMappings.batch.delete') }}</Button>
@@ -853,6 +918,9 @@ onMounted(() => { fetchConnections(); fetchCategories(); fetchMappings() })
               >
                 {{ t('productMappings.upstreamStatus.deleted') }}
               </span>
+				<span v-if="isProviderCatalogMapping(mapping)" class="shrink-0 inline-flex rounded-full border px-2 py-0.5 text-[10px]" :class="mapping.catalog_review_status === 'approved' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700'">
+					{{ mapping.catalog_review_status === 'approved' ? '已审核' : '待审核' }}
+				</span>
             </div>
             <div class="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
               <span>{{ t('productMappings.columns.connection') }}: <span class="text-foreground">{{ getProviderLabel(mapping) }}</span></span>
@@ -875,6 +943,12 @@ onMounted(() => { fetchConnections(); fetchCategories(); fetchMappings() })
             >
               {{ syncingId === mapping.id ? t('productMappings.actions.syncing') : t('productMappings.actions.sync') }}
             </Button>
+				<Select v-if="isProviderCatalogMapping(mapping)" :model-value="mapping.platform || ''" @update:modelValue="(value) => handleCorrectPlatform(mapping, String(value))">
+					<SelectTrigger class="h-8 w-full text-xs sm:w-[140px]" :disabled="correctingPlatformId === mapping.id"><SelectValue placeholder="纠正平台" /></SelectTrigger>
+					<SelectContent>
+						<SelectItem v-for="platform in platformChoices" :key="platform" :value="platform">{{ platform }}</SelectItem>
+					</SelectContent>
+				</Select>
             <span v-else class="self-center text-xs text-muted-foreground">{{ t('productMappings.actions.catalogSyncRequired') }}</span>
             <Button
               v-if="String(mapping.provider || '').trim().toLowerCase() === 'tgx'"

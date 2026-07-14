@@ -31,6 +31,7 @@ const isEditing = ref(false)
 const editingId = ref<number | null>(null)
 const pingingId = ref<number | null>(null)
 const syncingProviderCatalog = ref(false)
+const providerCatalogFilterReasons = ref<NonNullable<ProviderCatalogSyncResult['filter_reasons']>>([])
 
 const form = reactive({
   name: '',
@@ -276,6 +277,7 @@ const handleSyncProviderCatalog = async () => {
       tgx_connection_id: tgxConn.id,
     })
     const result = res.data.data as ProviderCatalogSyncResult | undefined
+		providerCatalogFilterReasons.value = result?.filter_reasons || []
     notifySuccess(t('siteConnections.providerCatalog.success', {
       pulled: (result?.fans_gurus_pulled ?? 0) + (result?.tgx_pulled ?? 0),
       imported: result?.imported ?? 0,
@@ -338,6 +340,15 @@ onMounted(() => {
         <Button class="w-full sm:w-auto" @click="openCreateModal">{{ t('siteConnections.createButton') }}</Button>
       </div>
     </div>
+
+		<div v-if="providerCatalogFilterReasons.length > 0" class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+			<div class="font-medium">目录筛选原因（最多显示 200 条）</div>
+			<div class="mt-2 max-h-36 overflow-y-auto space-y-1 text-xs">
+				<div v-for="item in providerCatalogFilterReasons" :key="`${item.provider}-${item.code}`">
+					{{ item.provider }} / {{ item.code }} / {{ item.name || '-' }}：{{ item.reason }}
+				</div>
+			</div>
+		</div>
 
     <div class="rounded-xl border border-border bg-card overflow-x-auto">
       <Table class="min-w-[900px]">

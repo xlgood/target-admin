@@ -18,6 +18,9 @@ const form = reactive({
   sync_page_size: 50,
   sync_max_pages: 200,
   sync_conn_concurrency: 3,
+  tgx_inventory_concurrency: 4,
+  tgx_inventory_rate_limit_per_second: 4,
+  tgx_inventory_retries: 2,
 })
 
 const clamp = (value: unknown, min: number, max: number, fallback: number) => {
@@ -39,6 +42,9 @@ const loadConfig = async () => {
       form.sync_page_size = clamp(data.sync_page_size, 10, 200, 50)
       form.sync_max_pages = clamp(data.sync_max_pages, 10, 500, 200)
       form.sync_conn_concurrency = clamp(data.sync_conn_concurrency, 1, 10, 3)
+      form.tgx_inventory_concurrency = clamp(data.tgx_inventory_concurrency, 1, 10, 4)
+      form.tgx_inventory_rate_limit_per_second = clamp(data.tgx_inventory_rate_limit_per_second, 1, 20, 4)
+      form.tgx_inventory_retries = clamp(data.tgx_inventory_retries, 0, 5, 2)
     }
   } catch {
     // ignore load error, use defaults
@@ -56,11 +62,17 @@ const save = async () => {
       sync_page_size: clamp(form.sync_page_size, 10, 200, 50),
       sync_max_pages: clamp(form.sync_max_pages, 10, 500, 200),
       sync_conn_concurrency: clamp(form.sync_conn_concurrency, 1, 10, 3),
+      tgx_inventory_concurrency: clamp(form.tgx_inventory_concurrency, 1, 10, 4),
+      tgx_inventory_rate_limit_per_second: clamp(form.tgx_inventory_rate_limit_per_second, 1, 20, 4),
+      tgx_inventory_retries: clamp(form.tgx_inventory_retries, 0, 5, 2),
     }
     form.interval_minutes = normalized.interval_minutes
     form.sync_page_size = normalized.sync_page_size
     form.sync_max_pages = normalized.sync_max_pages
     form.sync_conn_concurrency = normalized.sync_conn_concurrency
+    form.tgx_inventory_concurrency = normalized.tgx_inventory_concurrency
+    form.tgx_inventory_rate_limit_per_second = normalized.tgx_inventory_rate_limit_per_second
+    form.tgx_inventory_retries = normalized.tgx_inventory_retries
     await adminAPI.updateSettings({
       key: 'upstream_sync_config',
       value: normalized,
@@ -150,6 +162,27 @@ onMounted(() => {
         <label class="text-xs font-medium text-muted-foreground">{{ t('admin.settings.upstreamSync.concurrency.label') }}</label>
         <Input v-model.number="form.sync_conn_concurrency" type="number" min="1" max="10" />
         <p class="text-xs text-muted-foreground">{{ t('admin.settings.upstreamSync.concurrency.hint') }}</p>
+      </div>
+    </div>
+
+    <div class="rounded-lg border p-6 space-y-4">
+      <div>
+        <h3 class="text-sm font-semibold">TGX 库存同步保护</h3>
+        <p class="mt-1 text-xs text-muted-foreground">限制实时库存请求并对临时错误重试，避免大目录同步触发上游限流。</p>
+      </div>
+      <div class="grid gap-4 sm:grid-cols-3">
+        <div class="space-y-1">
+          <Label class="text-xs text-muted-foreground">并发请求</Label>
+          <Input v-model.number="form.tgx_inventory_concurrency" type="number" min="1" max="10" />
+        </div>
+        <div class="space-y-1">
+          <Label class="text-xs text-muted-foreground">每秒请求数</Label>
+          <Input v-model.number="form.tgx_inventory_rate_limit_per_second" type="number" min="1" max="20" />
+        </div>
+        <div class="space-y-1">
+          <Label class="text-xs text-muted-foreground">重试次数</Label>
+          <Input v-model.number="form.tgx_inventory_retries" type="number" min="0" max="5" />
+        </div>
       </div>
     </div>
   </div>

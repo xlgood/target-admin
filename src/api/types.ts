@@ -560,6 +560,7 @@ export interface ProviderCatalogSyncResult {
   updated: number
   skipped: number
   deactivated: number
+	 filter_reasons?: Array<{ provider: string; code: string; name: string; reason: string }>
 }
 
 // --- ProductMapping ---
@@ -573,6 +574,7 @@ export interface AdminProductMapping {
   upstream_product_code?: string
   provider?: string
   platform?: string
+	 catalog_review_status?: 'pending' | 'approved'
   upstream_sku_id: number
   upstream_product_name: string
   upstream_sku_name: string
@@ -588,6 +590,18 @@ export interface AdminProductMapping {
   last_synced_at?: string
   product?: { id: number; title?: LocalizedText; skus?: AdminProductSKU[] }
   [key: string]: unknown
+}
+
+export interface AdminTGXInventorySyncRun {
+  id: number
+  connection_id: number
+  status: 'success' | 'partial' | 'failed'
+  total: number
+  succeeded: number
+  failed: number
+  failed_details?: { items?: Array<{ sku_mapping_id: number; local_sku_id: number; upstream_sku_code: string; error: string }> }
+  started_at: string
+  finished_at: string
 }
 
 // --- ProcurementOrder ---
