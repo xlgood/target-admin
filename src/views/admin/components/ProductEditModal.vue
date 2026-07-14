@@ -277,6 +277,7 @@ const manualFieldTypeOptions = computed(() => [
   { value: 'textarea', label: t('admin.products.form.manualFormFieldTypes.textarea') },
   { value: 'phone', label: t('admin.products.form.manualFormFieldTypes.phone') },
   { value: 'email', label: t('admin.products.form.manualFormFieldTypes.email') },
+  { value: 'url', label: t('admin.products.form.manualFormFieldTypes.url') },
   { value: 'number', label: t('admin.products.form.manualFormFieldTypes.number') },
   { value: 'select', label: t('admin.products.form.manualFormFieldTypes.select') },
   { value: 'radio', label: t('admin.products.form.manualFormFieldTypes.radio') },
