@@ -554,6 +554,7 @@ export const adminAPI = {
   // Product Mappings
   getProductMappings: (params?: Record<string, unknown>) => api.get('/admin/product-mappings', { params }),
 	 getTGXInventorySyncHealth: (params?: Record<string, unknown>) => api.get('/admin/product-mappings/tgx-inventory-health', { params }),
+	 syncTGXInventoryAll: () => api.post('/admin/product-mappings/tgx-inventory/sync'),
 	 getTGXInventorySyncRuns: (params?: Record<string, unknown>) => api.get('/admin/product-mappings/tgx-inventory-runs', { params }),
 	 exportTGXInventorySyncRunFailures: (id: number) => api.get(`/admin/product-mappings/tgx-inventory-runs/${id}/failed-items.csv`, { responseType: 'blob' }),
   getProductMapping: (id: number) => api.get(`/admin/product-mappings/${id}`),

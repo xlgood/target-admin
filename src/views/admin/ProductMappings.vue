@@ -37,6 +37,7 @@ const syncingId = ref<number | null>(null)
 const refreshingInventoryId = ref<number | null>(null)
 const correctingPlatformId = ref<number | null>(null)
 const tgxInventoryHealth = ref<AdminTGXInventorySyncRun | null>(null)
+const syncingTGXInventory = ref(false)
 const showTGXHistory = ref(false)
 const tgxInventoryRuns = ref<AdminTGXInventorySyncRun[]>([])
 const tgxHistoryLoading = ref(false)
@@ -117,6 +118,24 @@ const autoCreateCategory = ref(false)
 const categoryImporting = ref(false)
 
 const normalizeFilterValue = (value: string) => (value === '__all__' ? '' : value)
+
+const handleSyncTGXInventoryAll = async () => {
+  const confirmed = await confirmAction({
+    description: '将按限流、重试策略刷新全部 TGX SKU 的实时库存；不会提交订单或修改售价。',
+    confirmText: '开始同步库存',
+  })
+  if (!confirmed) return
+  syncingTGXInventory.value = true
+  try {
+    await adminAPI.syncTGXInventoryAll()
+    notifySuccess('TGX 全量库存同步已入队，请稍后查看同步历史。')
+		window.setTimeout(() => { loadTGXInventoryHealth(); fetchMappings(pagination.page, { preserveRows: true }) }, 1500)
+  } catch (err: any) {
+    notifyError(err?.response?.data?.message || err?.message)
+  } finally {
+    syncingTGXInventory.value = false
+  }
+}
 
 // --- List helpers ---
 
@@ -818,6 +837,7 @@ onMounted(async () => { await fetchConnections(); fetchCategories(); fetchMappin
       <h1 class="text-2xl font-semibold">{{ t('productMappings.title') }}</h1>
       <div class="flex w-full gap-2 sm:w-auto">
         <Button variant="outline" class="w-full sm:w-auto" :disabled="refreshing" @click="refresh">{{ t('productMappings.refresh') }}</Button>
+		<Button variant="outline" class="w-full sm:w-auto" :disabled="syncingTGXInventory" @click="handleSyncTGXInventoryAll">{{ syncingTGXInventory ? 'TGX 库存同步中...' : '同步 TGX 全部库存' }}</Button>
         <Button class="w-full sm:w-auto" @click="openImportModal">{{ t('productMappings.importButton') }}</Button>
       </div>
     </div>
@@ -887,7 +907,7 @@ onMounted(async () => { await fetchConnections(); fetchCategories(); fetchMappin
 			<div v-if="tgxInventoryHealth.failed_details?.items?.length" class="mt-2 max-h-28 overflow-y-auto rounded border border-amber-200/70 bg-white/60 p-2 font-mono text-xs">
 				<div v-for="item in tgxInventoryHealth.failed_details.items" :key="item.sku_mapping_id">{{ item.upstream_sku_code }}: {{ item.error }}</div>
 			</div>
-			<Button size="sm" variant="outline" class="mt-2" @click="openTGXHistory">查看同步历史</Button>
+			<div class="mt-2 flex gap-2"><Button size="sm" variant="outline" @click="handleSyncTGXInventoryAll">同步 TGX 全部库存</Button><Button size="sm" variant="outline" @click="openTGXHistory">查看同步历史</Button></div>
     </div>
 
 		<Dialog v-model:open="showTGXHistory">
