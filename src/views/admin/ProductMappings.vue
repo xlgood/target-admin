@@ -198,6 +198,10 @@ const formatTGXAlertStatus = (status?: string) => {
   return labels[status || ''] || status || '-'
 }
 
+const hasTGXRunLevelFailure = (run: AdminTGXInventorySyncRun | null) => {
+  return Boolean(run?.failed_details?.items?.some((item) => !item.upstream_sku_code))
+}
+
 const formatSpecValues = (specValues: Record<string, string> | undefined | null) => {
   if (!specValues || typeof specValues !== 'object') return '-'
   const entries = Object.entries(specValues)
@@ -980,10 +984,10 @@ onBeforeUnmount(stopTGXInventoryPolling)
 			</template>
 			<template v-else>
 				{{ tgxInventoryHealth.succeeded }}/{{ tgxInventoryHealth.total }} 成功，失败 {{ tgxInventoryHealth.failed }}，{{ formatTime(tgxInventoryHealth.finished_at) }}。
-				<span v-if="tgxInventoryHealth.failed > 0" class="ml-1">失败 SKU 明细已记录；请在同步监控中处理。</span>
+				<span v-if="tgxInventoryHealth.failed > 0" class="ml-1">{{ hasTGXRunLevelFailure(tgxInventoryHealth) ? '同步运行异常已记录；请查看同步历史。' : '请求异常 SKU 明细已记录；请在同步监控中处理。' }}</span>
 			</template>
 			<div v-if="tgxInventoryHealth.failed_details?.items?.length" class="mt-2 max-h-28 overflow-y-auto rounded border border-amber-200/70 bg-white/60 p-2 font-mono text-xs">
-				<div v-for="item in tgxInventoryHealth.failed_details.items" :key="item.sku_mapping_id">{{ item.upstream_sku_code }}: {{ item.error }}</div>
+				<div v-for="(item, index) in tgxInventoryHealth.failed_details.items" :key="item.sku_mapping_id || index">{{ item.upstream_sku_code ? `${item.upstream_sku_code}: ` : '' }}{{ item.error }}</div>
 			</div>
 			<div class="mt-2 flex gap-2"><Button size="sm" variant="outline" :disabled="syncingTGXInventory || tgxInventorySyncQueued" @click="handleSyncTGXInventoryAll">同步 TGX 全部库存</Button><Button size="sm" variant="outline" @click="openTGXHistory">查看同步历史</Button></div>
     </div>

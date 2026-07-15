@@ -606,7 +606,7 @@ export interface AdminTGXInventorySyncRun {
   total: number
   succeeded: number
   failed: number
-  failed_details?: { items?: Array<{ sku_mapping_id: number; local_sku_id: number; upstream_sku_code: string; error: string }> }
+  failed_details?: { items?: Array<{ sku_mapping_id?: number; local_sku_id?: number; upstream_sku_code?: string; error: string }> }
   alert_status?: string
   started_at: string
   finished_at: string
