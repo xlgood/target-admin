@@ -131,10 +131,13 @@ const handleSyncTGXInventoryAll = async () => {
   if (!confirmed) return
   syncingTGXInventory.value = true
   try {
-    await adminAPI.syncTGXInventoryAll()
+    const response = await adminAPI.syncTGXInventoryAll()
+    const alreadyRunning = Boolean((response.data.data as { running?: boolean } | undefined)?.running)
     tgxInventorySyncQueued.value = true
     tgxInventoryQueuedAt = Date.now()
-    notifySuccess('TGX 全量库存同步已入队；正在等待库存 worker 处理，完成后本页会自动刷新。')
+    notifySuccess(alreadyRunning
+      ? 'TGX 库存同步正在进行中；本页会自动刷新结果。'
+      : 'TGX 全量库存同步已入队；正在等待库存 worker 处理，完成后本页会自动刷新。')
     startTGXInventoryPolling()
   } catch (err: any) {
     notifyError(err?.response?.data?.message || err?.message)
@@ -375,6 +378,14 @@ const refreshQueuedTGXInventory = async () => {
     return run.status !== 'running' && Number.isFinite(finishedAt) && finishedAt >= tgxInventoryQueuedAt
   })
   if (hasCompletedQueuedRun) {
+    tgxInventorySyncQueued.value = false
+    stopTGXInventoryPolling()
+		return
+  }
+  // The periodic inventory task may own the Redis lock when this request is
+  // queued. Do not leave the operator-facing control stuck indefinitely.
+  const hasRunningRun = tgxInventoryRuns.value.some((run) => run.status === 'running')
+  if (!hasRunningRun && Date.now() - tgxInventoryQueuedAt > 2 * 60 * 1000) {
     tgxInventorySyncQueued.value = false
     stopTGXInventoryPolling()
   }
