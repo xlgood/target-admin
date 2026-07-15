@@ -857,6 +857,10 @@ onMounted(() => {
                 <div class="text-xs text-muted-foreground">{{ t('procurement.detail.currency') }}</div>
                 <div class="mt-1 text-sm">{{ detailOrder.currency || '-' }}</div>
               </div>
+						<div v-if="detailOrder.manual_review_resolution">
+							<div class="text-xs text-muted-foreground">人工核对记录</div>
+							<div class="mt-1 text-sm">{{ detailOrder.manual_review_resolution }}<span v-if="detailOrder.manual_review_resolved_at"> · {{ formatTime(detailOrder.manual_review_resolved_at) }}</span></div>
+						</div>
             </div>
           </div>
 

@@ -3,7 +3,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { adminAPI } from '@/api/admin'
 import { useAdminAuthStore } from '@/stores/auth'
-import type { AdminSiteConnection, ProviderCatalogSyncResult } from '@/api/types'
+import type { AdminProviderBalanceSnapshot, AdminProviderCatalogSyncRun, AdminSiteConnection, ProviderCatalogSyncResult } from '@/api/types'
 import IdCell from '@/components/IdCell.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -32,6 +32,13 @@ const editingId = ref<number | null>(null)
 const pingingId = ref<number | null>(null)
 const syncingProviderCatalog = ref(false)
 const providerCatalogFilterReasons = ref<NonNullable<ProviderCatalogSyncResult['filter_reasons']>>([])
+const showBalanceHistory = ref(false)
+const balanceHistoryConnection = ref<AdminSiteConnection | null>(null)
+const balanceSnapshots = ref<AdminProviderBalanceSnapshot[]>([])
+const balanceHistoryLoading = ref(false)
+const showCatalogHistory = ref(false)
+const catalogSyncRuns = ref<AdminProviderCatalogSyncRun[]>([])
+const catalogHistoryLoading = ref(false)
 
 const form = reactive({
   name: '',
@@ -298,6 +305,47 @@ const handleSyncProviderCatalog = async () => {
   }
 }
 
+const openBalanceHistory = async (connection: AdminSiteConnection) => {
+  balanceHistoryConnection.value = connection
+  showBalanceHistory.value = true
+  balanceHistoryLoading.value = true
+  try {
+    const res = await adminAPI.getProviderBalanceSnapshots({ connection_id: connection.id, page: 1, page_size: 50 })
+    balanceSnapshots.value = (res.data.data as AdminProviderBalanceSnapshot[]) || []
+  } catch {
+    balanceSnapshots.value = []
+  } finally {
+    balanceHistoryLoading.value = false
+  }
+}
+
+const openCatalogHistory = async () => {
+  showCatalogHistory.value = true
+  catalogHistoryLoading.value = true
+  try {
+    const res = await adminAPI.getProviderCatalogSyncRuns({ page: 1, page_size: 30 })
+    catalogSyncRuns.value = (res.data.data as AdminProviderCatalogSyncRun[]) || []
+  } catch {
+    catalogSyncRuns.value = []
+  } finally {
+    catalogHistoryLoading.value = false
+  }
+}
+
+const downloadCatalogReasons = async (run: AdminProviderCatalogSyncRun) => {
+  try {
+    const res = await adminAPI.exportProviderCatalogFilterReasons(run.id)
+    const url = URL.createObjectURL(res.data as Blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `provider-catalog-filter-reasons-${run.id}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+  } catch (err: any) {
+    notifyError(err?.response?.data?.message || err?.message)
+  }
+}
+
 const statusBadgeClass = (status?: string) => {
   switch (status) {
     case 'active':
@@ -341,6 +389,7 @@ onMounted(() => {
         >
           {{ syncingProviderCatalog ? t('siteConnections.providerCatalog.syncing') : t('siteConnections.providerCatalog.action') }}
         </Button>
+				<Button v-if="canSyncProviderCatalog" variant="outline" class="w-full sm:w-auto" @click="openCatalogHistory">目录同步历史</Button>
         <Button class="w-full sm:w-auto" @click="openCreateModal">{{ t('siteConnections.createButton') }}</Button>
       </div>
     </div>
@@ -422,6 +471,7 @@ onMounted(() => {
                 >
                   {{ reapplyingId === conn.id ? '...' : t('siteConnections.actions.reapplyMarkup') }}
                 </Button>
+						<Button v-if="conn.protocol === 'fansgurus' || conn.protocol === 'tgx-account'" size="sm" variant="outline" @click="openBalanceHistory(conn)">余额历史</Button>
                 <Button size="sm" variant="outline" @click="handleToggleStatus(conn)">
                   {{ conn.status === 'active' ? t('siteConnections.actions.disable') : t('siteConnections.actions.enable') }}
                 </Button>
@@ -442,6 +492,22 @@ onMounted(() => {
         @change-page-size="changePageSize"
       />
     </div>
+
+		<Dialog v-model:open="showBalanceHistory">
+			<DialogScrollContent class="w-[calc(100vw-1rem)] max-w-3xl p-4 sm:p-6">
+				<DialogHeader><DialogTitle>{{ balanceHistoryConnection?.name || '上游' }}余额历史</DialogTitle></DialogHeader>
+				<div v-if="balanceHistoryLoading" class="py-8 text-center text-sm text-muted-foreground">加载中...</div>
+				<div v-else class="max-h-[65vh] overflow-auto rounded border"><Table class="min-w-[680px]"><TableHeader><TableRow><TableHead>检查时间</TableHead><TableHead>状态</TableHead><TableHead>余额</TableHead><TableHead>告警</TableHead><TableHead>错误</TableHead></TableRow></TableHeader><TableBody><TableRow v-for="snapshot in balanceSnapshots" :key="snapshot.id"><TableCell>{{ formatTime(snapshot.checked_at) }}</TableCell><TableCell>{{ snapshot.status }}</TableCell><TableCell>{{ snapshot.balance }} {{ snapshot.currency }}</TableCell><TableCell>{{ snapshot.alert_status || '-' }}</TableCell><TableCell class="max-w-[240px] break-words">{{ snapshot.error_message || '-' }}</TableCell></TableRow><TableRow v-if="balanceSnapshots.length === 0"><TableCell colspan="5" class="py-8 text-center text-muted-foreground">暂无记录</TableCell></TableRow></TableBody></Table></div>
+			</DialogScrollContent>
+		</Dialog>
+
+		<Dialog v-model:open="showCatalogHistory">
+			<DialogScrollContent class="w-[calc(100vw-1rem)] max-w-5xl p-4 sm:p-6">
+				<DialogHeader><DialogTitle>上游目录同步历史</DialogTitle></DialogHeader>
+				<div v-if="catalogHistoryLoading" class="py-8 text-center text-sm text-muted-foreground">加载中...</div>
+				<div v-else class="max-h-[65vh] overflow-auto rounded border"><Table class="min-w-[900px]"><TableHeader><TableRow><TableHead>时间</TableHead><TableHead>状态</TableHead><TableHead>拉取</TableHead><TableHead>导入/更新</TableHead><TableHead>筛除</TableHead><TableHead class="text-right">操作</TableHead></TableRow></TableHeader><TableBody><TableRow v-for="run in catalogSyncRuns" :key="run.id"><TableCell>{{ formatTime(run.finished_at) }}</TableCell><TableCell>{{ run.status }}</TableCell><TableCell>Fans {{ run.fansgurus_pulled }} / TGX {{ run.tgx_pulled }}</TableCell><TableCell>{{ run.imported }} / {{ run.updated }}</TableCell><TableCell>{{ run.filtered_telegram + run.filtered_inactive + run.filtered_platform }}</TableCell><TableCell class="text-right"><Button size="sm" variant="outline" @click="downloadCatalogReasons(run)">导出筛选原因</Button></TableCell></TableRow><TableRow v-if="catalogSyncRuns.length === 0"><TableCell colspan="6" class="py-8 text-center text-muted-foreground">暂无记录</TableCell></TableRow></TableBody></Table></div>
+			</DialogScrollContent>
+		</Dialog>
 
     <Dialog v-model:open="showModal" @update:open="(value: boolean) => { if (!value) closeModal() }">
       <DialogScrollContent class="w-[calc(100vw-1rem)] max-w-2xl p-4 sm:p-6" @interact-outside="(e: Event) => e.preventDefault()">

@@ -21,6 +21,8 @@ const form = reactive({
   tgx_inventory_concurrency: 4,
   tgx_inventory_rate_limit_per_second: 4,
   tgx_inventory_retries: 2,
+  tgx_inventory_alert_failure_percent: 50,
+  tgx_inventory_alert_cooldown_minutes: 30,
 })
 
 const clamp = (value: unknown, min: number, max: number, fallback: number) => {
@@ -45,6 +47,8 @@ const loadConfig = async () => {
       form.tgx_inventory_concurrency = clamp(data.tgx_inventory_concurrency, 1, 10, 4)
       form.tgx_inventory_rate_limit_per_second = clamp(data.tgx_inventory_rate_limit_per_second, 1, 20, 4)
       form.tgx_inventory_retries = clamp(data.tgx_inventory_retries, 0, 5, 2)
+      form.tgx_inventory_alert_failure_percent = clamp(data.tgx_inventory_alert_failure_percent, 1, 100, 50)
+      form.tgx_inventory_alert_cooldown_minutes = clamp(data.tgx_inventory_alert_cooldown_minutes, 5, 1440, 30)
     }
   } catch {
     // ignore load error, use defaults
@@ -65,6 +69,8 @@ const save = async () => {
       tgx_inventory_concurrency: clamp(form.tgx_inventory_concurrency, 1, 10, 4),
       tgx_inventory_rate_limit_per_second: clamp(form.tgx_inventory_rate_limit_per_second, 1, 20, 4),
       tgx_inventory_retries: clamp(form.tgx_inventory_retries, 0, 5, 2),
+      tgx_inventory_alert_failure_percent: clamp(form.tgx_inventory_alert_failure_percent, 1, 100, 50),
+      tgx_inventory_alert_cooldown_minutes: clamp(form.tgx_inventory_alert_cooldown_minutes, 5, 1440, 30),
     }
     form.interval_minutes = normalized.interval_minutes
     form.sync_page_size = normalized.sync_page_size
@@ -73,6 +79,8 @@ const save = async () => {
     form.tgx_inventory_concurrency = normalized.tgx_inventory_concurrency
     form.tgx_inventory_rate_limit_per_second = normalized.tgx_inventory_rate_limit_per_second
     form.tgx_inventory_retries = normalized.tgx_inventory_retries
+    form.tgx_inventory_alert_failure_percent = normalized.tgx_inventory_alert_failure_percent
+    form.tgx_inventory_alert_cooldown_minutes = normalized.tgx_inventory_alert_cooldown_minutes
     await adminAPI.updateSettings({
       key: 'upstream_sync_config',
       value: normalized,
@@ -184,6 +192,18 @@ onMounted(() => {
           <Input v-model.number="form.tgx_inventory_retries" type="number" min="0" max="5" />
         </div>
       </div>
+			<div class="grid gap-4 sm:grid-cols-2">
+				<div class="space-y-1">
+					<Label class="text-xs text-muted-foreground">告警失败比例 (%)</Label>
+					<Input v-model.number="form.tgx_inventory_alert_failure_percent" type="number" min="1" max="100" />
+					<p class="text-xs text-muted-foreground">仅当单次同步失败比例达到此值时发送告警。</p>
+				</div>
+				<div class="space-y-1">
+					<Label class="text-xs text-muted-foreground">告警冷却时间（分钟）</Label>
+					<Input v-model.number="form.tgx_inventory_alert_cooldown_minutes" type="number" min="5" max="1440" />
+					<p class="text-xs text-muted-foreground">同一 TGX 连接在冷却期间只发送一次库存失败告警。</p>
+				</div>
+			</div>
     </div>
   </div>
 </template>

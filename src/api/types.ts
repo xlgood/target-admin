@@ -605,6 +605,36 @@ export interface AdminTGXInventorySyncRun {
   succeeded: number
   failed: number
   failed_details?: { items?: Array<{ sku_mapping_id: number; local_sku_id: number; upstream_sku_code: string; error: string }> }
+  alert_status?: string
+  started_at: string
+  finished_at: string
+}
+
+export interface AdminProviderBalanceSnapshot {
+  id: number
+  connection_id: number
+  balance: string
+  currency: string
+  status: 'success' | 'failed' | 'low_balance'
+  error_message?: string
+  alert_status?: string
+  checked_at: string
+}
+
+export interface AdminProviderCatalogSyncRun {
+  id: number
+  status: 'success' | 'failed'
+  fansgurus_pulled: number
+  tgx_pulled: number
+  imported: number
+  updated: number
+  skipped: number
+  deactivated: number
+  filtered_telegram: number
+  filtered_inactive: number
+  filtered_platform: number
+  filter_reasons?: { items?: Array<{ provider: string; code: string; name: string; reason: string }> }
+  error_message?: string
   started_at: string
   finished_at: string
 }
@@ -622,6 +652,8 @@ export interface AdminProcurementOrder {
   local_sell_amount: number
   local_sell_currency: string
   error_message?: string
+	manual_review_resolution?: string
+	manual_review_resolved_at?: string
   retry_count: number
   next_retry_at?: string
   trace_id: string

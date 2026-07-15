@@ -37,6 +37,9 @@ const syncingId = ref<number | null>(null)
 const refreshingInventoryId = ref<number | null>(null)
 const correctingPlatformId = ref<number | null>(null)
 const tgxInventoryHealth = ref<AdminTGXInventorySyncRun | null>(null)
+const showTGXHistory = ref(false)
+const tgxInventoryRuns = ref<AdminTGXInventorySyncRun[]>([])
+const tgxHistoryLoading = ref(false)
 const platformChoices = ['x', 'instagram', 'facebook', 'tiktok', 'youtube', 'vk', 'spotify', 'discord', 'twitch', 'reddit', 'linkedin', 'github', 'quora', 'whatsapp', 'line-voom', 'threads', 'gmail', 'outlook', 'hotmail', 'overseas-email']
 
 // Expand detail
@@ -293,6 +296,38 @@ const loadTGXInventoryHealth = async () => {
     const response = await adminAPI.getTGXInventorySyncHealth(connection ? { connection_id: connection.id } : undefined)
     tgxInventoryHealth.value = response.data.data as AdminTGXInventorySyncRun | null
   } catch { tgxInventoryHealth.value = null }
+}
+
+const loadTGXInventoryRuns = async () => {
+  tgxHistoryLoading.value = true
+  try {
+    const connectionId = normalizeFilterValue(filters.connection_id)
+    const res = await adminAPI.getTGXInventorySyncRuns({ page: 1, page_size: 30, connection_id: connectionId || undefined })
+    tgxInventoryRuns.value = (res.data.data as AdminTGXInventorySyncRun[]) || []
+  } catch {
+    tgxInventoryRuns.value = []
+  } finally {
+    tgxHistoryLoading.value = false
+  }
+}
+
+const openTGXHistory = () => {
+  showTGXHistory.value = true
+  loadTGXInventoryRuns()
+}
+
+const downloadTGXFailures = async (run: AdminTGXInventorySyncRun) => {
+  try {
+    const res = await adminAPI.exportTGXInventorySyncRunFailures(run.id)
+    const url = URL.createObjectURL(res.data as Blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `tgx-inventory-failures-${run.id}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+  } catch (err: any) {
+    notifyError(err?.response?.data?.message || err?.message)
+  }
 }
 
 const refresh = () => {
@@ -852,7 +887,21 @@ onMounted(async () => { await fetchConnections(); fetchCategories(); fetchMappin
 			<div v-if="tgxInventoryHealth.failed_details?.items?.length" class="mt-2 max-h-28 overflow-y-auto rounded border border-amber-200/70 bg-white/60 p-2 font-mono text-xs">
 				<div v-for="item in tgxInventoryHealth.failed_details.items" :key="item.sku_mapping_id">{{ item.upstream_sku_code }}: {{ item.error }}</div>
 			</div>
+			<Button size="sm" variant="outline" class="mt-2" @click="openTGXHistory">查看同步历史</Button>
     </div>
+
+		<Dialog v-model:open="showTGXHistory">
+			<DialogScrollContent class="w-[calc(100vw-1rem)] max-w-4xl p-4 sm:p-6">
+				<DialogHeader><DialogTitle>TGX 库存同步历史</DialogTitle></DialogHeader>
+				<div v-if="tgxHistoryLoading" class="py-8 text-center text-sm text-muted-foreground">加载中...</div>
+				<div v-else class="max-h-[65vh] overflow-auto rounded border">
+					<Table class="min-w-[720px]">
+						<TableHeader><TableRow><TableHead>时间</TableHead><TableHead>状态</TableHead><TableHead>成功/总数</TableHead><TableHead>失败</TableHead><TableHead>告警</TableHead><TableHead class="text-right">操作</TableHead></TableRow></TableHeader>
+						<TableBody><TableRow v-for="run in tgxInventoryRuns" :key="run.id"><TableCell>{{ formatTime(run.finished_at) }}</TableCell><TableCell>{{ run.status }}</TableCell><TableCell>{{ run.succeeded }}/{{ run.total }}</TableCell><TableCell>{{ run.failed }}</TableCell><TableCell>{{ run.alert_status || '-' }}</TableCell><TableCell class="text-right"><Button v-if="run.failed > 0" size="sm" variant="outline" @click="downloadTGXFailures(run)">导出失败明细</Button></TableCell></TableRow><TableRow v-if="tgxInventoryRuns.length === 0"><TableCell colspan="6" class="py-8 text-center text-muted-foreground">暂无记录</TableCell></TableRow></TableBody>
+					</Table>
+				</div>
+			</DialogScrollContent>
+		</Dialog>
 
     <!-- Batch action bar -->
     <div v-if="selectedMappingIds.size > 0" class="flex flex-wrap items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3">

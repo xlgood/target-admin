@@ -547,11 +547,16 @@ export const adminAPI = {
   pingSiteConnection: (id: number) => api.post(`/admin/site-connections/${id}/ping`),
   updateSiteConnectionStatus: (id: number, data: { is_active?: boolean; status?: string }) => api.put(`/admin/site-connections/${id}/status`, data),
   reapplyConnectionMarkup: (id: number) => api.post(`/admin/site-connections/${id}/reapply-markup`),
+	 getProviderBalanceSnapshots: (params?: Record<string, unknown>) => api.get('/admin/site-connections/balance-snapshots', { params }),
   syncProviderCatalog: (data: { fansgurus_connection_id: number; tgx_connection_id: number }) =>
     api.post('/admin/provider-catalog/sync', data, { timeout: 90000 }),
+	 getProviderCatalogSyncRuns: (params?: Record<string, unknown>) => api.get('/admin/provider-catalog/sync-runs', { params }),
+	 exportProviderCatalogFilterReasons: (id: number) => api.get(`/admin/provider-catalog/sync-runs/${id}/filter-reasons.csv`, { responseType: 'blob' }),
   // Product Mappings
   getProductMappings: (params?: Record<string, unknown>) => api.get('/admin/product-mappings', { params }),
 	 getTGXInventorySyncHealth: (params?: Record<string, unknown>) => api.get('/admin/product-mappings/tgx-inventory-health', { params }),
+	 getTGXInventorySyncRuns: (params?: Record<string, unknown>) => api.get('/admin/product-mappings/tgx-inventory-runs', { params }),
+	 exportTGXInventorySyncRunFailures: (id: number) => api.get(`/admin/product-mappings/tgx-inventory-runs/${id}/failed-items.csv`, { responseType: 'blob' }),
   getProductMapping: (id: number) => api.get(`/admin/product-mappings/${id}`),
   importUpstreamProduct: (data: Record<string, unknown>) => api.post('/admin/product-mappings/import', data),
   batchImportUpstreamProducts: (data: Record<string, unknown>) => api.post('/admin/product-mappings/batch-import', data),
