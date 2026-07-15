@@ -173,6 +173,10 @@ const formatTime = (raw?: string) => {
   return Number.isNaN(d.getTime()) ? '-' : d.toLocaleString()
 }
 
+const formatTGXRunTime = (run: AdminTGXInventorySyncRun) => {
+  return run.status === 'running' ? formatTime(run.started_at) : formatTime(run.finished_at || run.started_at)
+}
+
 const formatTGXSyncStatus = (status?: string) => {
   if (status === 'success') return '完成'
   if (status === 'partial') return '部分完成'
@@ -906,6 +910,7 @@ onBeforeUnmount(stopTGXInventoryPolling)
       <div class="flex w-full gap-2 sm:w-auto">
         <Button variant="outline" class="w-full sm:w-auto" :disabled="refreshing" @click="refresh">{{ t('productMappings.refresh') }}</Button>
 		<Button variant="outline" class="w-full sm:w-auto" :disabled="syncingTGXInventory || tgxInventorySyncQueued" @click="handleSyncTGXInventoryAll">{{ syncingTGXInventory ? '正在提交同步任务...' : tgxInventorySyncQueued ? 'TGX 库存任务排队中...' : '同步 TGX 全部库存' }}</Button>
+		<Button variant="outline" class="w-full sm:w-auto" @click="openTGXHistory">库存同步历史</Button>
         <Button class="w-full sm:w-auto" @click="openImportModal">{{ t('productMappings.importButton') }}</Button>
       </div>
     </div>
@@ -968,7 +973,7 @@ onBeforeUnmount(stopTGXInventoryPolling)
       </div>
     </div>
 
-    <div v-if="tgxInventoryHealth" class="rounded-xl border px-4 py-3 text-sm" :class="tgxInventoryHealth.failed > 0 ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800'">
+		<div v-if="tgxInventoryHealth && (tgxInventoryHealth.status === 'running' || tgxInventoryHealth.failed > 0)" class="rounded-xl border px-4 py-3 text-sm" :class="tgxInventoryHealth.status === 'running' ? 'border-sky-200 bg-sky-50 text-sky-800' : 'border-amber-200 bg-amber-50 text-amber-800'">
 			<span class="font-medium">TGX 最近库存同步（{{ formatTGXSyncStatus(tgxInventoryHealth.status) }}）：</span>
 			<template v-if="tgxInventoryHealth.status === 'running'">
 				已于 {{ formatTime(tgxInventoryHealth.started_at) }} 开始，正在刷新 {{ tgxInventoryHealth.total }} 个 SKU。
@@ -980,8 +985,15 @@ onBeforeUnmount(stopTGXInventoryPolling)
 			<div v-if="tgxInventoryHealth.failed_details?.items?.length" class="mt-2 max-h-28 overflow-y-auto rounded border border-amber-200/70 bg-white/60 p-2 font-mono text-xs">
 				<div v-for="item in tgxInventoryHealth.failed_details.items" :key="item.sku_mapping_id">{{ item.upstream_sku_code }}: {{ item.error }}</div>
 			</div>
-			<div class="mt-2 flex gap-2"><Button size="sm" variant="outline" @click="handleSyncTGXInventoryAll">同步 TGX 全部库存</Button><Button size="sm" variant="outline" @click="openTGXHistory">查看同步历史</Button></div>
+			<div class="mt-2 flex gap-2"><Button size="sm" variant="outline" :disabled="syncingTGXInventory || tgxInventorySyncQueued" @click="handleSyncTGXInventoryAll">同步 TGX 全部库存</Button><Button size="sm" variant="outline" @click="openTGXHistory">查看同步历史</Button></div>
     </div>
+
+		<div v-else-if="tgxInventoryHealth" class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+			<span>TGX 库存已同步：{{ tgxInventoryHealth.succeeded }}/{{ tgxInventoryHealth.total }}</span>
+			<span>·</span>
+			<span>{{ formatTime(tgxInventoryHealth.finished_at) }}</span>
+			<Button size="sm" variant="link" class="h-auto p-0 text-xs" @click="openTGXHistory">查看历史</Button>
+		</div>
 
 		<Dialog v-model:open="showTGXHistory">
 			<DialogScrollContent class="w-[calc(100vw-1rem)] max-w-4xl p-4 sm:p-6">
@@ -1001,7 +1013,7 @@ onBeforeUnmount(stopTGXInventoryPolling)
 						</TableHeader>
 						<TableBody>
 							<TableRow v-for="run in tgxInventoryRuns" :key="run.id">
-								<TableCell class="whitespace-nowrap">{{ formatTime(run.finished_at || run.started_at) }}</TableCell>
+								<TableCell class="whitespace-nowrap">{{ formatTGXRunTime(run) }}</TableCell>
 								<TableCell>{{ formatTGXSyncStatus(run.status) }}</TableCell>
 								<TableCell>{{ run.succeeded }}/{{ run.total }}</TableCell>
 								<TableCell>{{ run.failed }}</TableCell>
