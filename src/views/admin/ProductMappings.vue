@@ -438,6 +438,15 @@ const handleCorrectPlatform = async (mapping: AdminProductMapping, platform: str
   } catch (err: any) { notifyError(err?.response?.data?.message || err?.message) } finally { correctingPlatformId.value = null }
 }
 
+const handleRestoreAutomaticPlatform = async (mapping: AdminProductMapping) => {
+  correctingPlatformId.value = mapping.id
+  try {
+    await adminAPI.restoreProviderCatalogPlatformAutoDetection(mapping.id)
+    notifySuccess('已恢复自动识别，下次目录同步时生效')
+    fetchMappings(pagination.page)
+  } catch (err: any) { notifyError(err?.response?.data?.message || err?.message) } finally { correctingPlatformId.value = null }
+}
+
 const handleToggleStatus = async (mapping: AdminProductMapping) => {
   try {
     await adminAPI.updateProductMappingStatus(mapping.id, { is_active: !mapping.is_active })
@@ -949,7 +958,14 @@ onMounted(async () => { await fetchConnections(); fetchCategories(); fetchMappin
 						<SelectItem v-for="platform in platformChoices" :key="platform" :value="platform">{{ platform }}</SelectItem>
 					</SelectContent>
 				</Select>
-            <span v-else class="self-center text-xs text-muted-foreground">{{ t('productMappings.actions.catalogSyncRequired') }}</span>
+                <Button
+                  v-if="mapping.platform_locked"
+                  size="sm"
+                  variant="ghost"
+                  :disabled="correctingPlatformId === mapping.id"
+                  @click="handleRestoreAutomaticPlatform(mapping)"
+                >恢复自动</Button>
+            <span v-if="!isProviderCatalogMapping(mapping)" class="self-center text-xs text-muted-foreground">{{ t('productMappings.actions.catalogSyncRequired') }}</span>
             <Button
               v-if="String(mapping.provider || '').trim().toLowerCase() === 'tgx'"
               size="sm"

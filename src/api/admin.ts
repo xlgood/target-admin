@@ -562,7 +562,8 @@ export const adminAPI = {
   deleteProductMapping: (id: number) => api.delete(`/admin/product-mappings/${id}`),
   batchSyncProductMappings: (ids: number[]) => api.post('/admin/product-mappings/batch-sync', { ids }),
   batchUpdateProductMappingStatus: (ids: number[], isActive: boolean) => api.post('/admin/product-mappings/batch-status', { ids, is_active: isActive }),
-	 batchApproveProviderCatalogMappings: (ids: number[]) => api.post('/admin/product-mappings/batch-approve', { ids }),
+  batchApproveProviderCatalogMappings: (ids: number[]) => api.post('/admin/product-mappings/batch-approve', { ids }),
+  restoreProviderCatalogPlatformAutoDetection: (id: number) => api.delete(`/admin/product-mappings/${id}/platform`),
   batchDeleteProductMappings: (ids: number[]) => api.post('/admin/product-mappings/batch-delete', { ids }),
   getUpstreamProducts: (params?: Record<string, unknown>) => api.get('/admin/upstream-products', { params }),
   getUpstreamCategories: (params: { connection_id: string }) => api.get('/admin/upstream-categories', { params }),
@@ -573,6 +574,7 @@ export const adminAPI = {
   getProcurementOrder: (id: number) => api.get(`/admin/procurement-orders/${id}`),
   downloadProcurementUpstreamPayload: (id: number) => api.get(`/admin/procurement-orders/${id}/upstream-payload/download`, { blob: true }),
   retryProcurementOrder: (id: number) => api.post(`/admin/procurement-orders/${id}/retry`),
+  resolveProcurementManualReview: (id: number, data: { resolution: 'not_created' | 'bind'; upstream_order_no?: string }) => api.post(`/admin/procurement-orders/${id}/resolve-manual-review`, data),
   syncProcurementOrderStatus: (id: number) => api.post(`/admin/procurement-orders/${id}/sync-status`),
   cancelProcurementOrder: (id: number) => api.post(`/admin/procurement-orders/${id}/cancel`),
 

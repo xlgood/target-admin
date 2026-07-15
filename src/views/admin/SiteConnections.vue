@@ -46,6 +46,7 @@ const form = reactive({
   price_markup_percent: 0,
   price_rounding_mode: 'none',
   auto_sync_price: 'false',
+  balance_alert_minimum: 0,
 })
 const reapplyingId = ref<number | null>(null)
 const canSyncProviderCatalog = computed(() => authStore.hasPermission('POST:/admin/provider-catalog/sync'))
@@ -106,6 +107,7 @@ const resetForm = () => {
     price_markup_percent: 0,
     price_rounding_mode: 'none',
     auto_sync_price: 'false',
+    balance_alert_minimum: 0,
   })
 }
 
@@ -144,6 +146,7 @@ const openEditModal = (conn: AdminSiteConnection) => {
     price_markup_percent: conn.price_markup_percent ?? 0,
     price_rounding_mode: conn.price_rounding_mode || 'none',
     auto_sync_price: conn.auto_sync_price ? 'true' : 'false',
+    balance_alert_minimum: conn.balance_alert_minimum ?? 0,
   })
   showModal.value = true
 }
@@ -171,6 +174,7 @@ const buildPayload = () => {
     price_markup_percent: Number(form.price_markup_percent) || 0,
     price_rounding_mode: form.price_rounding_mode,
     auto_sync_price: form.auto_sync_price === 'true',
+    balance_alert_minimum: Number(form.balance_alert_minimum) || 0,
   }
 }
 
@@ -380,11 +384,14 @@ onMounted(() => {
             <TableCell class="min-w-[160px] px-6 py-4 font-medium text-foreground break-words">{{ conn.name }}</TableCell>
             <TableCell class="min-w-[200px] px-6 py-4 text-xs text-muted-foreground font-mono break-all">{{ conn.base_url }}</TableCell>
             <TableCell class="min-w-[80px] px-6 py-4 text-xs text-muted-foreground break-words">{{ conn.protocol }}</TableCell>
-            <TableCell class="min-w-[80px] px-6 py-4 text-xs text-muted-foreground">
+            <TableCell class="min-w-[110px] px-6 py-4 text-xs text-muted-foreground">
               <span v-if="conn.price_markup_percent && Number(conn.price_markup_percent) !== 0" class="inline-flex rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs text-blue-700">
                 +{{ conn.price_markup_percent }}%
               </span>
               <span v-else class="text-muted-foreground">-</span>
+              <div v-if="conn.last_balance" class="mt-1 font-mono text-foreground">
+                {{ conn.last_balance }} {{ conn.last_balance_currency || '' }}
+              </div>
             </TableCell>
             <TableCell class="min-w-[90px] px-6 py-4">
               <span
@@ -531,6 +538,11 @@ onMounted(() => {
                   </SelectContent>
                 </Select>
                 <p class="mt-1 text-xs text-muted-foreground">{{ t('siteConnections.form.autoSyncPriceHint') }}</p>
+              </div>
+              <div>
+                <label class="mb-1.5 block text-xs font-medium text-muted-foreground">{{ t('siteConnections.form.balanceAlertMinimum') }}</label>
+                <Input v-model.number="form.balance_alert_minimum" type="number" step="0.01" min="0" placeholder="0" />
+                <p class="mt-1 text-xs text-muted-foreground">{{ t('siteConnections.form.balanceAlertMinimumHint') }}</p>
               </div>
             </div>
           </div>

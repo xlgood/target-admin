@@ -86,6 +86,7 @@ const detailLoading = ref(false)
 const retryingId = ref<number | null>(null)
 const syncingId = ref<number | null>(null)
 const cancelingId = ref<number | null>(null)
+const resolvingManualReviewId = ref<number | null>(null)
 const procurementDownloading = ref(false)
 
 const handleDownloadUpstreamPayload = async (orderId: number) => {
@@ -111,6 +112,7 @@ const statusOptions = [
   { value: 'accepted', key: 'procurement.status.accepted' },
   { value: 'rejected', key: 'procurement.status.rejected' },
   { value: 'failed', key: 'procurement.status.failed' },
+  { value: 'manual_review', key: 'procurement.status.manual_review' },
   { value: 'partially_refunded', key: 'procurement.status.partially_refunded' },
   { value: 'fulfilled', key: 'procurement.status.fulfilled' },
   { value: 'refunded', key: 'procurement.status.refunded' },
@@ -449,7 +451,7 @@ const profitClass = (order: ProcurementOrderWithRelations) => {
 const procurementErrorDiagnosisKey = (message?: string): ProcurementDiagnosisKey => {
   const raw = normalizeText(message).toLowerCase()
   if (!raw) return 'unknown'
-  if (raw.includes('provider_submit_temporarily_unavailable')) return 'temporaryUnavailable'
+  if (raw.includes('provider_submit_result_uncertain')) return 'temporaryUnavailable'
   if (raw.includes('no product mapping') || raw.includes('lookup product mapping')) return 'mappingProduct'
   if (raw.includes('no sku mapping') || raw.includes('lookup sku mapping')) return 'mappingSku'
   if (
@@ -473,6 +475,45 @@ const procurementErrorTitle = (message?: string) => t(`procurement.diagnostics.$
 const procurementErrorAction = (message?: string) => t(`procurement.diagnostics.${procurementErrorDiagnosisKey(message)}.action`)
 
 const canRetry = (status: string) => ['failed', 'rejected'].includes(status)
+const needsManualReview = (status: string) => status === 'manual_review'
+
+const handleManualReview = async (order: ProcurementOrderWithRelations) => {
+  const bindExisting = await confirmAction({
+    description: t('procurement.actions.manualReviewChoice', { id: order.id }),
+    confirmText: t('procurement.actions.bindUpstreamOrder'),
+  })
+  if (bindExisting) {
+    const upstreamOrderNo = window.prompt(t('procurement.actions.upstreamOrderNoPrompt'))?.trim()
+    if (!upstreamOrderNo) return
+    resolvingManualReviewId.value = order.id
+    try {
+      await adminAPI.resolveProcurementManualReview(order.id, { resolution: 'bind', upstream_order_no: upstreamOrderNo })
+      notifySuccess(t('procurement.actions.manualReviewSuccess'))
+    } catch (err: any) {
+      notifyError(err?.response?.data?.message || err?.message)
+    } finally {
+      resolvingManualReviewId.value = null
+    }
+  } else {
+    const confirmedNotCreated = await confirmAction({
+      description: t('procurement.actions.confirmNotCreated', { id: order.id }),
+      confirmText: t('procurement.actions.resubmitAfterCheck'),
+    })
+    if (!confirmedNotCreated) return
+    resolvingManualReviewId.value = order.id
+    try {
+      await adminAPI.resolveProcurementManualReview(order.id, { resolution: 'not_created' })
+      notifySuccess(t('procurement.actions.retrySuccess'))
+    } catch (err: any) {
+      notifyError(err?.response?.data?.message || err?.message)
+    } finally {
+      resolvingManualReviewId.value = null
+    }
+  }
+  fetchOrders(pagination.page)
+  fetchStats()
+  if (showDetail.value && detailOrder.value?.id === order.id) openDetail(order)
+}
 const canSyncStatus = (status: string) => ['accepted'].includes(status)
 const canCancel = (status: string) => ['pending', 'failed', 'rejected'].includes(status)
 
@@ -647,6 +688,16 @@ onMounted(() => {
               </div>
             </div>
             <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end" @click.stop>
+              <Button
+                v-if="needsManualReview(order.status)"
+                size="sm"
+                variant="outline"
+                class="h-7 text-xs"
+                :disabled="resolvingManualReviewId === order.id"
+                @click="handleManualReview(order)"
+              >
+                {{ t('procurement.actions.manualReview') }}
+              </Button>
               <Button
                 v-if="canRetry(order.status)"
                 size="sm"
@@ -970,6 +1021,15 @@ onMounted(() => {
 
           <!-- Actions -->
           <div class="flex flex-col-reverse gap-3 border-t border-border pt-4 sm:flex-row sm:justify-end">
+            <Button
+              v-if="needsManualReview(detailOrder.status)"
+              variant="outline"
+              class="w-full sm:w-auto"
+              :disabled="resolvingManualReviewId === detailOrder.id"
+              @click="handleManualReview(detailOrder)"
+            >
+              {{ t('procurement.actions.manualReview') }}
+            </Button>
             <Button
               v-if="canRetry(detailOrder.status)"
               variant="outline"

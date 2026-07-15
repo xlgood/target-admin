@@ -545,6 +545,10 @@ export interface AdminSiteConnection {
   price_markup_percent?: number
   price_rounding_mode?: string
   auto_sync_price?: boolean
+  balance_alert_minimum?: number
+  last_balance?: string
+  last_balance_currency?: string
+  last_balance_at?: string
   created_at: string
   updated_at: string
 }
@@ -568,6 +572,7 @@ export type UpstreamProductStatus = 'active' | 'inactive' | 'deleted'
 
 export interface AdminProductMapping {
   id: number
+  platform_locked?: boolean
   connection_id: number
   local_product_id: number
   upstream_product_id: number
