@@ -24,3 +24,8 @@ export function getFirstImageUrl(images: any): string {
 
   return getImageUrl(imageUrl)
 }
+
+// Provider catalog covers are shared 16:9 SVGs, unlike ordinary product photos.
+export function isProviderCatalogImage(url: string | undefined | null): boolean {
+  return /(?:^|\/)uploads\/catalog\/[^/?#]+\.svg(?:[?#]|$)/.test(url || '')
+}

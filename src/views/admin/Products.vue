@@ -6,7 +6,7 @@ import { useI18n } from 'vue-i18n'
 import { adminAPI } from '@/api/admin'
 import type { AdminProduct, AdminCategory, AdminProductSKU } from '@/api/types'
 import IdCell from '@/components/IdCell.vue'
-import { getFirstImageUrl } from '@/utils/image'
+import { getFirstImageUrl, isProviderCatalogImage } from '@/utils/image'
 import { formatMoney, getLocalizedText } from '@/utils/format'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -176,9 +176,6 @@ const resolveManualStockMetrics = (product: AdminProduct) => {
 }
 
 const formatManualStockSummary = (product: AdminProduct) => {
-	if (product?.upstream_stock_unknown) {
-		return t('admin.products.stock.upstreamPending')
-	}
 	const metrics = resolveManualStockMetrics(product)
   const total = metrics.total
   if (total === -1) {
@@ -188,6 +185,12 @@ const formatManualStockSummary = (product: AdminProduct) => {
   const sold = metrics.sold
   const remaining = Math.max(total, 0)
   return t('admin.products.stock.manualSummary', { remaining, locked, sold })
+}
+
+const formatUpstreamStockSummary = (product: AdminProduct) => {
+  if (product?.upstream_stock_unknown) return t('admin.products.stock.upstreamPending')
+  if (Number(product?.upstream_stock_available) === -1) return t('admin.products.stock.upstreamUnlimited')
+  return t('admin.products.stock.upstreamAvailable', { available: toSafeInt(product?.upstream_stock_available) })
 }
 
 const formatAutoStockSummary = (product: AdminProduct) => {
@@ -214,9 +217,6 @@ const fulfillmentTypeBadgeClass = (product: AdminProduct) => {
 }
 
 const manualStockBadgeClass = (product: AdminProduct) => {
-	if (product?.upstream_stock_unknown) {
-		return 'border-amber-200 bg-amber-50 text-amber-700'
-	}
 	const total = resolveManualStockMetrics(product).total
   if (total === -1) {
     return 'border-zinc-200 bg-zinc-50 text-zinc-700'
@@ -224,6 +224,13 @@ const manualStockBadgeClass = (product: AdminProduct) => {
   if (total <= 0) {
     return 'border-rose-200 bg-rose-50 text-rose-700'
   }
+  return 'border-emerald-200 bg-emerald-50 text-emerald-700'
+}
+
+const upstreamStockBadgeClass = (product: AdminProduct) => {
+  if (product?.upstream_stock_unknown) return 'border-amber-200 bg-amber-50 text-amber-700'
+  if (Number(product?.upstream_stock_available) === -1) return 'border-zinc-200 bg-zinc-50 text-zinc-700'
+  if (toSafeInt(product?.upstream_stock_available) <= 0) return 'border-rose-200 bg-rose-50 text-rose-700'
   return 'border-emerald-200 bg-emerald-50 text-emerald-700'
 }
 
@@ -627,7 +634,7 @@ watch(
             <TableCell class="px-6 py-4">
               <div class="flex min-w-[320px] items-center gap-4">
                 <div class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-muted/40 text-xs text-muted-foreground">
-                  <img v-if="getFirstImageUrl(product.images)" :src="getFirstImageUrl(product.images)" class="h-full w-full object-cover" />
+                  <img v-if="getFirstImageUrl(product.images)" :src="getFirstImageUrl(product.images)" class="h-full w-full" :class="isProviderCatalogImage(getFirstImageUrl(product.images)) ? 'object-contain' : 'object-cover'" />
                   <span v-else>{{ t('admin.common.noImage') }}</span>
                 </div>
                 <div class="min-w-0 flex-1">
@@ -653,7 +660,14 @@ watch(
                       {{ product.is_affiliate_enabled ? t('admin.products.affiliate.enabled') : t('admin.products.affiliate.disabled') }}
                     </span>
                     <span
-                      v-if="product.fulfillment_type === 'manual'"
+                      v-if="product.upstream_stock_managed"
+                      class="rounded-full border px-2 py-0.5 text-[11px]"
+                      :class="upstreamStockBadgeClass(product)"
+                    >
+                      {{ formatUpstreamStockSummary(product) }}
+                    </span>
+                    <span
+                      v-else-if="product.fulfillment_type === 'manual'"
                       class="rounded-full border px-2 py-0.5 text-[11px]"
                       :class="manualStockBadgeClass(product)"
                     >

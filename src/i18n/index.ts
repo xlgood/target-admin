@@ -1505,6 +1505,8 @@ const messages = {
         stock: {
           unlimited: '库存不限',
 		  upstreamPending: '上游库存待刷新',
+		  upstreamAvailable: '上游库存 {available}',
+		  upstreamUnlimited: '上游库存不限',
           manualSummary: '剩余 {remaining} · 锁定 {locked} · 已售 {sold}',
           summary: '库存 {available}/{total} · 锁定 {locked} · 已售 {sold}',
         },
@@ -5841,6 +5843,8 @@ const messages = {
         stock: {
           unlimited: '庫存不限',
 		  upstreamPending: '上游庫存待重新整理',
+		  upstreamAvailable: '上游庫存 {available}',
+		  upstreamUnlimited: '上游庫存不限',
           manualSummary: '剩餘 {remaining} · 鎖定 {locked} · 已售 {sold}',
           summary: '庫存 {available}/{total} · 鎖定 {locked} · 已售 {sold}',
         },
@@ -10177,6 +10181,8 @@ const messages = {
         stock: {
           unlimited: 'Unlimited stock',
 		  upstreamPending: 'Upstream inventory pending refresh',
+		  upstreamAvailable: 'Upstream stock {available}',
+		  upstreamUnlimited: 'Upstream stock unlimited',
           manualSummary: 'Remaining {remaining} · Locked {locked} · Sold {sold}',
           summary: 'Stock {available}/{total} · Locked {locked} · Sold {sold}',
         },

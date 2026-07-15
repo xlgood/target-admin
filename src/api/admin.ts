@@ -546,7 +546,6 @@ export const adminAPI = {
   deleteSiteConnection: (id: number) => api.delete(`/admin/site-connections/${id}`),
   pingSiteConnection: (id: number) => api.post(`/admin/site-connections/${id}/ping`),
   updateSiteConnectionStatus: (id: number, data: { is_active?: boolean; status?: string }) => api.put(`/admin/site-connections/${id}/status`, data),
-  reapplyConnectionMarkup: (id: number) => api.post(`/admin/site-connections/${id}/reapply-markup`),
 	 getProviderBalanceSnapshots: (params?: Record<string, unknown>) => api.get('/admin/site-connections/balance-snapshots', { params }),
   syncProviderCatalog: (data: { fansgurus_connection_id: number; tgx_connection_id: number }) =>
     api.post('/admin/provider-catalog/sync', data, { timeout: 90000 }),

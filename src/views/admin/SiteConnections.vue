@@ -3,7 +3,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { adminAPI } from '@/api/admin'
 import { useAdminAuthStore } from '@/stores/auth'
-import type { AdminProviderBalanceSnapshot, AdminProviderCatalogSyncRun, AdminSiteConnection, ProviderCatalogSyncResult } from '@/api/types'
+import type { AdminProviderBalanceSnapshot, AdminProviderCatalogSyncRun, AdminSiteConnection } from '@/api/types'
 import IdCell from '@/components/IdCell.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -31,7 +31,6 @@ const isEditing = ref(false)
 const editingId = ref<number | null>(null)
 const pingingId = ref<number | null>(null)
 const syncingProviderCatalog = ref(false)
-const providerCatalogFilterReasons = ref<NonNullable<ProviderCatalogSyncResult['filter_reasons']>>([])
 const showBalanceHistory = ref(false)
 const balanceHistoryConnection = ref<AdminSiteConnection | null>(null)
 const balanceSnapshots = ref<AdminProviderBalanceSnapshot[]>([])
@@ -55,7 +54,6 @@ const form = reactive({
   auto_sync_price: 'false',
   balance_alert_minimum: 0,
 })
-const reapplyingId = ref<number | null>(null)
 const canSyncProviderCatalog = computed(() => authStore.hasPermission('POST:/admin/provider-catalog/sync'))
 
 const siteConnectionSchema = {
@@ -242,24 +240,6 @@ const handleDelete = async (conn: AdminSiteConnection) => {
   }
 }
 
-const handleReapplyMarkup = async (conn: AdminSiteConnection) => {
-  const confirmed = await confirmAction({
-    description: t('siteConnections.reapplyMarkup.confirm', { name: conn.name || '#' + conn.id }),
-    confirmText: t('siteConnections.actions.reapplyMarkup'),
-  })
-  if (!confirmed) return
-  reapplyingId.value = conn.id
-  try {
-    const res = await adminAPI.reapplyConnectionMarkup(conn.id)
-    const count = (res.data?.data as Record<string, number>)?.updated_products ?? 0
-    notifySuccess(t('siteConnections.reapplyMarkup.success', { count }))
-  } catch (err: any) {
-    notifyError(err?.response?.data?.message || err?.message)
-  } finally {
-    reapplyingId.value = null
-  }
-}
-
 const findConnectionByProtocol = (protocol: string) => {
   return connections.value.find((conn) => conn.protocol === protocol)
 }
@@ -287,8 +267,7 @@ const handleSyncProviderCatalog = async () => {
       fansgurus_connection_id: fansConn.id,
       tgx_connection_id: tgxConn.id,
     })
-    const result = res.data.data as ProviderCatalogSyncResult | undefined
-		providerCatalogFilterReasons.value = result?.filter_reasons || []
+    const result = res.data.data as Record<string, number> | undefined
     notifySuccess(t('siteConnections.providerCatalog.success', {
       pulled: (result?.fans_gurus_pulled ?? 0) + (result?.tgx_pulled ?? 0),
       imported: result?.imported ?? 0,
@@ -394,15 +373,6 @@ onMounted(() => {
       </div>
     </div>
 
-		<div v-if="providerCatalogFilterReasons.length > 0" class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-			<div class="font-medium">目录筛选原因（最多显示 200 条）</div>
-			<div class="mt-2 max-h-36 overflow-y-auto space-y-1 text-xs">
-				<div v-for="item in providerCatalogFilterReasons" :key="`${item.provider}-${item.code}`">
-					{{ item.provider }} / {{ item.code }} / {{ item.name || '-' }}：{{ item.reason }}
-				</div>
-			</div>
-		</div>
-
     <div class="rounded-xl border border-border bg-card overflow-x-auto">
       <Table class="min-w-[900px]">
         <TableHeader class="border-b border-border bg-muted/40 text-xs uppercase text-muted-foreground">
@@ -461,15 +431,6 @@ onMounted(() => {
                   @click="handlePing(conn)"
                 >
                   {{ pingingId === conn.id ? t('siteConnections.ping.loading') : 'Ping' }}
-                </Button>
-                <Button
-                  v-if="(conn.price_markup_percent && Number(conn.price_markup_percent) !== 0) || (conn.exchange_rate != null && Number(conn.exchange_rate) !== 1)"
-                  size="sm"
-                  variant="outline"
-                  :disabled="reapplyingId === conn.id"
-                  @click="handleReapplyMarkup(conn)"
-                >
-                  {{ reapplyingId === conn.id ? '...' : t('siteConnections.actions.reapplyMarkup') }}
                 </Button>
 						<Button v-if="conn.protocol === 'fansgurus' || conn.protocol === 'tgx-account'" size="sm" variant="outline" @click="openBalanceHistory(conn)">余额历史</Button>
                 <Button size="sm" variant="outline" @click="handleToggleStatus(conn)">
