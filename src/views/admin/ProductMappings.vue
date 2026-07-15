@@ -164,6 +164,26 @@ const formatTime = (raw?: string) => {
   return Number.isNaN(d.getTime()) ? '-' : d.toLocaleString()
 }
 
+const formatTGXSyncStatus = (status?: string) => {
+  if (status === 'success') return '完成'
+  if (status === 'partial') return '部分完成'
+  if (status === 'failed') return '失败'
+  return status || '-'
+}
+
+const formatTGXAlertStatus = (status?: string) => {
+  const labels: Record<string, string> = {
+    not_required: '无需告警',
+    below_threshold: '未达告警阈值',
+    suppressed: '冷却中未重复告警',
+    pending: '告警待发送',
+    sent: '已发送',
+    delivery_failed: '发送失败',
+    notification_unavailable: '通知服务不可用',
+  }
+  return labels[status || ''] || status || '-'
+}
+
 const formatSpecValues = (specValues: Record<string, string> | undefined | null) => {
   if (!specValues || typeof specValues !== 'object') return '-'
   const entries = Object.entries(specValues)
@@ -916,8 +936,31 @@ onMounted(async () => { await fetchConnections(); fetchCategories(); fetchMappin
 				<div v-if="tgxHistoryLoading" class="py-8 text-center text-sm text-muted-foreground">加载中...</div>
 				<div v-else class="max-h-[65vh] overflow-auto rounded border">
 					<Table class="min-w-[720px]">
-						<TableHeader><TableRow><TableHead>时间</TableHead><TableHead>状态</TableHead><TableHead>成功/总数</TableHead><TableHead>失败</TableHead><TableHead>告警</TableHead><TableHead class="text-right">操作</TableHead></TableRow></TableHeader>
-						<TableBody><TableRow v-for="run in tgxInventoryRuns" :key="run.id"><TableCell>{{ formatTime(run.finished_at) }}</TableCell><TableCell>{{ run.status }}</TableCell><TableCell>{{ run.succeeded }}/{{ run.total }}</TableCell><TableCell>{{ run.failed }}</TableCell><TableCell>{{ run.alert_status || '-' }}</TableCell><TableCell class="text-right"><Button v-if="run.failed > 0" size="sm" variant="outline" @click="downloadTGXFailures(run)">导出失败明细</Button></TableCell></TableRow><TableRow v-if="tgxInventoryRuns.length === 0"><TableCell colspan="6" class="py-8 text-center text-muted-foreground">暂无记录</TableCell></TableRow></TableBody>
+						<TableHeader>
+							<TableRow>
+								<TableHead>时间</TableHead>
+								<TableHead>状态</TableHead>
+								<TableHead>成功/总数</TableHead>
+								<TableHead>请求异常</TableHead>
+								<TableHead>告警</TableHead>
+								<TableHead class="text-right">操作</TableHead>
+							</TableRow>
+						</TableHeader>
+						<TableBody>
+							<TableRow v-for="run in tgxInventoryRuns" :key="run.id">
+								<TableCell class="whitespace-nowrap">{{ formatTime(run.finished_at) }}</TableCell>
+								<TableCell>{{ formatTGXSyncStatus(run.status) }}</TableCell>
+								<TableCell>{{ run.succeeded }}/{{ run.total }}</TableCell>
+								<TableCell>{{ run.failed }}</TableCell>
+								<TableCell>{{ formatTGXAlertStatus(run.alert_status) }}</TableCell>
+								<TableCell class="text-right">
+									<Button v-if="run.failed > 0" size="sm" variant="outline" @click="downloadTGXFailures(run)">导出失败明细</Button>
+								</TableCell>
+							</TableRow>
+							<TableRow v-if="tgxInventoryRuns.length === 0">
+								<TableCell colspan="6" class="py-8 text-center text-muted-foreground">暂无记录</TableCell>
+							</TableRow>
+						</TableBody>
 					</Table>
 				</div>
 			</DialogScrollContent>
