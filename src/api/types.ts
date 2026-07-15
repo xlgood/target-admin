@@ -602,7 +602,7 @@ export interface AdminProductMapping {
 export interface AdminTGXInventorySyncRun {
   id: number
   connection_id: number
-  status: 'success' | 'partial' | 'failed'
+  status: 'running' | 'success' | 'partial' | 'failed'
   total: number
   succeeded: number
   failed: number

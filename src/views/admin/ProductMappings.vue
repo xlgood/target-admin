@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useDebounceFn } from '@vueuse/core'
 import { adminAPI } from '@/api/admin'
@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogScrollContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { confirmAction } from '@/utils/confirm'
 import { notifyError, notifySuccess } from '@/utils/notify'
 import { getLocalizedText } from '@/utils/format'
@@ -41,6 +42,9 @@ const syncingTGXInventory = ref(false)
 const showTGXHistory = ref(false)
 const tgxInventoryRuns = ref<AdminTGXInventorySyncRun[]>([])
 const tgxHistoryLoading = ref(false)
+const tgxInventorySyncQueued = ref(false)
+let tgxInventoryPollTimer: number | null = null
+let tgxInventoryQueuedAt = 0
 const platformChoices = ['x', 'instagram', 'facebook', 'tiktok', 'youtube', 'vk', 'spotify', 'discord', 'twitch', 'reddit', 'linkedin', 'github', 'quora', 'whatsapp', 'line-voom', 'threads', 'gmail', 'outlook', 'hotmail', 'overseas-email']
 
 // Expand detail
@@ -128,8 +132,10 @@ const handleSyncTGXInventoryAll = async () => {
   syncingTGXInventory.value = true
   try {
     await adminAPI.syncTGXInventoryAll()
-    notifySuccess('TGX 全量库存同步已入队，请稍后查看同步历史。')
-		window.setTimeout(() => { loadTGXInventoryHealth(); fetchMappings(pagination.page, { preserveRows: true }) }, 1500)
+    tgxInventorySyncQueued.value = true
+    tgxInventoryQueuedAt = Date.now()
+    notifySuccess('TGX 全量库存同步已入队；正在等待库存 worker 处理，完成后本页会自动刷新。')
+    startTGXInventoryPolling()
   } catch (err: any) {
     notifyError(err?.response?.data?.message || err?.message)
   } finally {
@@ -168,6 +174,7 @@ const formatTGXSyncStatus = (status?: string) => {
   if (status === 'success') return '完成'
   if (status === 'partial') return '部分完成'
   if (status === 'failed') return '失败'
+  if (status === 'running') return '进行中'
   return status || '-'
 }
 
@@ -348,6 +355,35 @@ const loadTGXInventoryRuns = async () => {
   } finally {
     tgxHistoryLoading.value = false
   }
+}
+
+const stopTGXInventoryPolling = () => {
+  if (tgxInventoryPollTimer !== null) {
+    window.clearInterval(tgxInventoryPollTimer)
+    tgxInventoryPollTimer = null
+  }
+}
+
+const refreshQueuedTGXInventory = async () => {
+  await Promise.all([
+    loadTGXInventoryHealth(),
+    loadTGXInventoryRuns(),
+    fetchMappings(pagination.page, { preserveRows: true }),
+  ])
+  const hasCompletedQueuedRun = tgxInventoryRuns.value.some((run) => {
+    const finishedAt = new Date(run.finished_at).getTime()
+    return run.status !== 'running' && Number.isFinite(finishedAt) && finishedAt >= tgxInventoryQueuedAt
+  })
+  if (hasCompletedQueuedRun) {
+    tgxInventorySyncQueued.value = false
+    stopTGXInventoryPolling()
+  }
+}
+
+const startTGXInventoryPolling = () => {
+  stopTGXInventoryPolling()
+  window.setTimeout(() => { void refreshQueuedTGXInventory() }, 1500)
+  tgxInventoryPollTimer = window.setInterval(() => { void refreshQueuedTGXInventory() }, 5000)
 }
 
 const openTGXHistory = () => {
@@ -849,6 +885,7 @@ const handleBatchImport = async () => {
 }
 
 onMounted(async () => { await fetchConnections(); fetchCategories(); fetchMappings(); loadTGXInventoryHealth() })
+onBeforeUnmount(stopTGXInventoryPolling)
 </script>
 
 <template>
@@ -857,7 +894,7 @@ onMounted(async () => { await fetchConnections(); fetchCategories(); fetchMappin
       <h1 class="text-2xl font-semibold">{{ t('productMappings.title') }}</h1>
       <div class="flex w-full gap-2 sm:w-auto">
         <Button variant="outline" class="w-full sm:w-auto" :disabled="refreshing" @click="refresh">{{ t('productMappings.refresh') }}</Button>
-		<Button variant="outline" class="w-full sm:w-auto" :disabled="syncingTGXInventory" @click="handleSyncTGXInventoryAll">{{ syncingTGXInventory ? 'TGX 库存同步中...' : '同步 TGX 全部库存' }}</Button>
+		<Button variant="outline" class="w-full sm:w-auto" :disabled="syncingTGXInventory || tgxInventorySyncQueued" @click="handleSyncTGXInventoryAll">{{ syncingTGXInventory ? '正在提交同步任务...' : tgxInventorySyncQueued ? 'TGX 库存任务排队中...' : '同步 TGX 全部库存' }}</Button>
         <Button class="w-full sm:w-auto" @click="openImportModal">{{ t('productMappings.importButton') }}</Button>
       </div>
     </div>
@@ -921,9 +958,14 @@ onMounted(async () => { await fetchConnections(); fetchCategories(); fetchMappin
     </div>
 
     <div v-if="tgxInventoryHealth" class="rounded-xl border px-4 py-3 text-sm" :class="tgxInventoryHealth.failed > 0 ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800'">
-      <span class="font-medium">TGX 最近库存同步：</span>
-      {{ tgxInventoryHealth.succeeded }}/{{ tgxInventoryHealth.total }} 成功，失败 {{ tgxInventoryHealth.failed }}，{{ formatTime(tgxInventoryHealth.finished_at) }}。
-      <span v-if="tgxInventoryHealth.failed > 0" class="ml-1">失败 SKU 明细已记录；请在同步监控中处理。</span>
+			<span class="font-medium">TGX 最近库存同步（{{ formatTGXSyncStatus(tgxInventoryHealth.status) }}）：</span>
+			<template v-if="tgxInventoryHealth.status === 'running'">
+				已于 {{ formatTime(tgxInventoryHealth.started_at) }} 开始，正在刷新 {{ tgxInventoryHealth.total }} 个 SKU。
+			</template>
+			<template v-else>
+				{{ tgxInventoryHealth.succeeded }}/{{ tgxInventoryHealth.total }} 成功，失败 {{ tgxInventoryHealth.failed }}，{{ formatTime(tgxInventoryHealth.finished_at) }}。
+				<span v-if="tgxInventoryHealth.failed > 0" class="ml-1">失败 SKU 明细已记录；请在同步监控中处理。</span>
+			</template>
 			<div v-if="tgxInventoryHealth.failed_details?.items?.length" class="mt-2 max-h-28 overflow-y-auto rounded border border-amber-200/70 bg-white/60 p-2 font-mono text-xs">
 				<div v-for="item in tgxInventoryHealth.failed_details.items" :key="item.sku_mapping_id">{{ item.upstream_sku_code }}: {{ item.error }}</div>
 			</div>
@@ -938,7 +980,7 @@ onMounted(async () => { await fetchConnections(); fetchCategories(); fetchMappin
 					<Table class="min-w-[720px]">
 						<TableHeader>
 							<TableRow>
-								<TableHead>时间</TableHead>
+								<TableHead>开始时间</TableHead>
 								<TableHead>状态</TableHead>
 								<TableHead>成功/总数</TableHead>
 								<TableHead>请求异常</TableHead>
@@ -948,7 +990,7 @@ onMounted(async () => { await fetchConnections(); fetchCategories(); fetchMappin
 						</TableHeader>
 						<TableBody>
 							<TableRow v-for="run in tgxInventoryRuns" :key="run.id">
-								<TableCell class="whitespace-nowrap">{{ formatTime(run.finished_at) }}</TableCell>
+								<TableCell class="whitespace-nowrap">{{ formatTime(run.finished_at || run.started_at) }}</TableCell>
 								<TableCell>{{ formatTGXSyncStatus(run.status) }}</TableCell>
 								<TableCell>{{ run.succeeded }}/{{ run.total }}</TableCell>
 								<TableCell>{{ run.failed }}</TableCell>
