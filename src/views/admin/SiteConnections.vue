@@ -3,7 +3,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { adminAPI } from '@/api/admin'
 import { useAdminAuthStore } from '@/stores/auth'
-import type { AdminProviderBalanceSnapshot, AdminProviderCatalogSyncRun, AdminSiteConnection } from '@/api/types'
+import type { AdminProviderBalanceSnapshot, AdminProviderCatalogSyncRun, AdminSiteConnection, ProviderCatalogSyncResult } from '@/api/types'
 import IdCell from '@/components/IdCell.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,7 +13,7 @@ import TableSkeleton from '@/components/TableSkeleton.vue'
 import ListPagination from '@/components/ListPagination.vue'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { confirmAction } from '@/utils/confirm'
-import { notifyError, notifySuccess } from '@/utils/notify'
+import { notifyError, notifyInfo, notifySuccess } from '@/utils/notify'
 import { useFormValidation, rules } from '@/composables/useFormValidation'
 
 const { t } = useI18n()
@@ -267,7 +267,7 @@ const handleSyncProviderCatalog = async () => {
       fansgurus_connection_id: fansConn.id,
       tgx_connection_id: tgxConn.id,
     })
-    const result = res.data.data as Record<string, number> | undefined
+    const result = res.data.data as ProviderCatalogSyncResult | undefined
     notifySuccess(t('siteConnections.providerCatalog.success', {
       pulled: (result?.fans_gurus_pulled ?? 0) + (result?.tgx_pulled ?? 0),
       imported: result?.imported ?? 0,
@@ -276,6 +276,9 @@ const handleSyncProviderCatalog = async () => {
       filtered: (result?.filtered_telegram ?? 0) + (result?.filtered_inactive ?? 0) + (result?.filtered_platform ?? 0),
       deactivated: result?.deactivated ?? 0,
     }))
+    if (result && !result.inventory_refresh_queued) {
+      notifyInfo(t(`siteConnections.providerCatalog.inventoryRefresh.${result.inventory_refresh_status}`))
+    }
     fetchConnections(pagination.page)
   } catch (err: any) {
     notifyError(err?.response?.data?.message || err?.message)

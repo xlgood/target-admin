@@ -566,7 +566,9 @@ export interface ProviderCatalogSyncResult {
   updated: number
   skipped: number
   deactivated: number
-	 filter_reasons?: Array<{ provider: string; code: string; name: string; reason: string }>
+  filter_reasons?: Array<{ provider: string; code: string; name: string; reason: string }>
+  inventory_refresh_queued: boolean
+  inventory_refresh_status: 'queued' | 'queue_disabled' | 'enqueue_failed'
 }
 
 // --- ProductMapping ---

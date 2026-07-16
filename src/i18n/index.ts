@@ -367,6 +367,10 @@ const messages = {
         missingConnections: '请先创建 fansgurus 和 tgx-account 两个连接',
         confirm: '确认使用「{fans}」和「{tgx}」同步 Provider 商品目录？',
         success: '同步完成：拉取 {pulled} 个，新建 {imported} 个，更新 {updated} 个，跳过 {skipped} 个，过滤 {filtered} 个，停用 {deactivated} 个',
+        inventoryRefresh: {
+          queue_disabled: '目录已同步，但库存队列未启用，请在启用库存 worker 后手动刷新库存。',
+          enqueue_failed: '目录已同步，但库存刷新任务入队失败，请检查队列后手动重试。',
+        },
       },
       ping: {
         success: 'Ping 成功',
@@ -4705,6 +4709,10 @@ const messages = {
         missingConnections: '請先建立 fansgurus 和 tgx-account 兩個連接',
         confirm: '確認使用「{fans}」和「{tgx}」同步 Provider 商品目錄？',
         success: '同步完成：拉取 {pulled} 個，新增 {imported} 個，更新 {updated} 個，跳過 {skipped} 個，過濾 {filtered} 個，停用 {deactivated} 個',
+        inventoryRefresh: {
+          queue_disabled: '目錄已同步，但庫存佇列未啟用，請在啟用庫存 worker 後手動重新整理庫存。',
+          enqueue_failed: '目錄已同步，但庫存重新整理任務入列失敗，請檢查佇列後手動重試。',
+        },
       },
       ping: {
         success: 'Ping 成功',
@@ -9043,6 +9051,10 @@ const messages = {
         missingConnections: 'Create both fansgurus and tgx-account connections first',
         confirm: 'Sync provider catalog with "{fans}" and "{tgx}"?',
         success: 'Sync complete: pulled {pulled}, created {imported}, updated {updated}, skipped {skipped}, filtered {filtered}, deactivated {deactivated}',
+        inventoryRefresh: {
+          queue_disabled: 'Catalog sync completed, but the inventory queue is disabled. Refresh inventory after enabling the inventory worker.',
+          enqueue_failed: 'Catalog sync completed, but the inventory refresh task could not be queued. Check the queue and retry manually.',
+        },
       },
       ping: {
         success: 'Ping succeeded',
