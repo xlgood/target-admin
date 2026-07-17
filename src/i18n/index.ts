@@ -2926,6 +2926,8 @@ const messages = {
         contact: {
           title: '联系方式',
           subtitle: '全局通用配置',
+          email: '支持邮箱',
+          emailPlaceholder: 'support@example.com',
           telegram: 'Telegram 链接',
           telegramPlaceholder: 'https://t.me/...',
           whatsapp: 'WhatsApp 链接',
@@ -7268,6 +7270,8 @@ const messages = {
         contact: {
           title: '聯絡方式',
           subtitle: '全域通用配置',
+          email: '支援信箱',
+          emailPlaceholder: 'support@example.com',
           telegram: 'Telegram 連結',
           telegramPlaceholder: 'https://t.me/...',
           whatsapp: 'WhatsApp 連結',
@@ -11610,6 +11614,8 @@ const messages = {
         contact: {
           title: 'Contact',
           subtitle: 'Global settings',
+          email: 'Support email',
+          emailPlaceholder: 'support@example.com',
           telegram: 'Telegram',
           telegramPlaceholder: 'https://t.me/...',
           whatsapp: 'WhatsApp',

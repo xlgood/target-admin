@@ -184,6 +184,7 @@ const form = reactive({
   currency: 'CNY',
   order_max_refund_days: 30,
   contact: {
+    email: '',
     telegram: '',
     whatsapp: '',
   },
@@ -958,6 +959,10 @@ onMounted(() => {
           <p class="mt-1 text-xs text-muted-foreground">{{ t('admin.settings.contact.subtitle') }}</p>
         </div>
         <div class="grid grid-cols-1 gap-6 p-6 md:grid-cols-2">
+          <div class="space-y-2">
+            <label class="text-xs font-medium text-muted-foreground">{{ t('admin.settings.contact.email') }}</label>
+            <Input v-model="form.contact.email" type="email" :placeholder="t('admin.settings.contact.emailPlaceholder')" />
+          </div>
           <div class="space-y-2">
             <label class="text-xs font-medium text-muted-foreground">{{ t('admin.settings.contact.telegram') }}</label>
             <Input v-model="form.contact.telegram" :placeholder="t('admin.settings.contact.telegramPlaceholder')" />
