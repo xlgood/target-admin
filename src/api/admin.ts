@@ -550,13 +550,13 @@ export const adminAPI = {
   syncProviderCatalog: (data: { fansgurus_connection_id: number; tgx_connection_id: number }) =>
     api.post('/admin/provider-catalog/sync', data, { timeout: 90000 }),
 	 getProviderCatalogSyncRuns: (params?: Record<string, unknown>) => api.get('/admin/provider-catalog/sync-runs', { params }),
-	 exportProviderCatalogFilterReasons: (id: number) => api.get(`/admin/provider-catalog/sync-runs/${id}/filter-reasons.csv`, { responseType: 'blob' }),
+	 exportProviderCatalogFilterReasons: (id: number) => api.get(`/admin/provider-catalog/sync-runs/${id}/filter-reasons.csv`, { blob: true }),
   // Product Mappings
   getProductMappings: (params?: Record<string, unknown>) => api.get('/admin/product-mappings', { params }),
 	 getTGXInventorySyncHealth: (params?: Record<string, unknown>) => api.get('/admin/product-mappings/tgx-inventory-health', { params }),
 	 syncTGXInventoryAll: () => api.post('/admin/product-mappings/tgx-inventory/sync'),
 	 getTGXInventorySyncRuns: (params?: Record<string, unknown>) => api.get('/admin/product-mappings/tgx-inventory-runs', { params }),
-	 exportTGXInventorySyncRunFailures: (id: number) => api.get(`/admin/product-mappings/tgx-inventory-runs/${id}/failed-items.csv`, { responseType: 'blob' }),
+	 exportTGXInventorySyncRunFailures: (id: number) => api.get(`/admin/product-mappings/tgx-inventory-runs/${id}/failed-items.csv`, { blob: true }),
   getProductMapping: (id: number) => api.get(`/admin/product-mappings/${id}`),
   importUpstreamProduct: (data: Record<string, unknown>) => api.post('/admin/product-mappings/import', data),
   batchImportUpstreamProducts: (data: Record<string, unknown>) => api.post('/admin/product-mappings/batch-import', data),
