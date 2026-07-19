@@ -93,6 +93,7 @@ type SKUFormItem = {
   sku_code: string
   spec_values: Record<string, string>
   price_amount: number
+  price_quantity_basis: number
   cost_price_amount: number
   manual_stock_total: number
   is_active: boolean
@@ -132,6 +133,7 @@ const createSKUFormItem = (raw?: Partial<AdminProductSKU>): SKUFormItem => ({
     }, {}),
   },
   price_amount: Number(raw?.price_amount || 0),
+  price_quantity_basis: Math.max(1, Math.floor(Number(raw?.price_quantity_basis) || 1)),
   cost_price_amount: Number(raw?.cost_price_amount || 0),
   manual_stock_total: toSafeStockTotal(raw?.manual_stock_total),
   is_active: raw?.is_active ?? true,
@@ -147,6 +149,7 @@ const form = reactive({
   content: { 'zh-CN': '', 'zh-TW': '', 'en-US': '' } as LocalizedText,
   instructions: { 'zh-CN': '', 'zh-TW': '', 'en-US': '' } as LocalizedText,
   price_amount: 0,
+  price_quantity_basis: 1,
   cost_price_amount: 0,
   images: [] as string[],
   tags: [] as string[],
@@ -462,6 +465,7 @@ const normalizeSKUsForSubmit = () => {
       sku_code: skuCode,
       spec_values: specValues,
       price_amount: priceAmount,
+      price_quantity_basis: Math.max(1, Math.floor(Number(item.price_quantity_basis) || 1)),
       cost_price_amount: Number(item.cost_price_amount) || 0,
       manual_stock_total: manualStockTotal,
       is_active: isActive,
@@ -538,6 +542,7 @@ const populateForm = (product: AdminProduct) => {
     content: product.content || { 'zh-CN': '', 'zh-TW': '', 'en-US': '' },
     instructions: (product as AdminProduct & { instructions?: LocalizedText }).instructions || { 'zh-CN': '', 'zh-TW': '', 'en-US': '' },
     price_amount: Number(product.price_amount || 0),
+    price_quantity_basis: Math.max(1, Math.floor(Number(product.price_quantity_basis) || 1)),
     cost_price_amount: Number(product.cost_price_amount || 0),
     images: imagesList,
     tags: tagsList,
@@ -575,10 +580,12 @@ const handleSubmit = async () => {
     const normalizedSKUs = normalizeSKUsForSubmit()
     const activeSKU = normalizedSKUs.find((item) => item.is_active)
     let effectivePrice = Number(form.price_amount)
+    let effectivePriceQuantityBasis = Math.max(1, Math.floor(Number(form.price_quantity_basis) || 1))
     let effectiveCostPrice = Number(form.cost_price_amount)
     if (normalizedSKUs.length > 0) {
       const priceSource = activeSKU || normalizedSKUs[0]!
       effectivePrice = Number(priceSource.price_amount)
+      effectivePriceQuantityBasis = Math.max(1, Math.floor(Number(priceSource.price_quantity_basis) || 1))
       effectiveCostPrice = Number(priceSource.cost_price_amount || 0)
     }
     const normalizedMinPurchaseQuantity = Number(form.min_purchase_quantity)
@@ -611,6 +618,7 @@ const handleSubmit = async () => {
       content: form.content,
       instructions: form.instructions,
       price_amount: effectivePrice,
+      price_quantity_basis: effectivePriceQuantityBasis,
       cost_price_amount: effectiveCostPrice,
       images: form.images,
       tags: form.tags,
@@ -986,6 +994,11 @@ watch(
                 <div class="md:col-span-1">
                   <label class="block text-xs font-medium text-muted-foreground mb-1.5">{{ t('admin.products.form.skuPrice') }}</label>
                   <Input v-model.number="sku.price_amount" type="number" step="0.01" min="0" :placeholder="t('admin.products.form.skuPricePlaceholder')" />
+                </div>
+                <div class="md:col-span-1">
+                  <label class="block text-xs font-medium text-muted-foreground mb-1.5">{{ t('admin.products.form.priceQuantityBasis') }}</label>
+                  <Input v-model.number="sku.price_quantity_basis" type="number" step="1" min="1" />
+                  <p class="mt-1 text-xs text-muted-foreground">{{ t('admin.products.form.priceQuantityBasisTip') }}</p>
                 </div>
                 <div class="md:col-span-1">
                   <label class="block text-xs font-medium text-muted-foreground mb-1.5">{{ t('admin.products.form.skuCostPrice') }}</label>

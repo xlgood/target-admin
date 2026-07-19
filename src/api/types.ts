@@ -32,6 +32,7 @@ export interface AdminProductSKU {
   sku_code: string
   spec_values: Record<string, string>
   price_amount: number
+  price_quantity_basis: number
   cost_price_amount: number
   manual_stock_total: number
   manual_stock_locked: number
@@ -60,6 +61,7 @@ export interface AdminProduct {
   description: LocalizedText
   content: LocalizedText
   price_amount: number
+  price_quantity_basis: number
   cost_price_amount: number
   wholesale_prices?: AdminWholesalePrice[]
   images: string[]
