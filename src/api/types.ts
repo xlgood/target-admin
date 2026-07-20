@@ -573,6 +573,14 @@ export interface ProviderCatalogSyncResult {
   inventory_refresh_status: 'queued' | 'queue_disabled' | 'enqueue_failed'
 }
 
+export interface ProviderCatalogContentSyncResult {
+  fans_gurus_pulled: number
+  tgx_pulled: number
+  matched: number
+  updated: number
+  skipped: number
+}
+
 // --- ProductMapping ---
 export type UpstreamProductStatus = 'active' | 'inactive' | 'deleted'
 

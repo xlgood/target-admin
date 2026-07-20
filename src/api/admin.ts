@@ -549,7 +549,10 @@ export const adminAPI = {
 	 getProviderBalanceSnapshots: (params?: Record<string, unknown>) => api.get('/admin/site-connections/balance-snapshots', { params }),
   syncProviderCatalog: (data: { fansgurus_connection_id: number; tgx_connection_id: number }) =>
     api.post('/admin/provider-catalog/sync', data, { timeout: 90000 }),
+	 syncProviderCatalogContent: (data: { fansgurus_connection_id: number; tgx_connection_id: number }) =>
+		api.post('/admin/provider-catalog/content/sync', data, { timeout: 90000 }),
 	 getProviderCatalogSyncRuns: (params?: Record<string, unknown>) => api.get('/admin/provider-catalog/sync-runs', { params }),
+	 getProviderCatalogContentSyncRuns: (params?: Record<string, unknown>) => api.get('/admin/provider-catalog/content/sync-runs', { params }),
 	 exportProviderCatalogFilterReasons: (id: number) => api.get(`/admin/provider-catalog/sync-runs/${id}/filter-reasons.csv`, { blob: true }),
   // Product Mappings
   getProductMappings: (params?: Record<string, unknown>) => api.get('/admin/product-mappings', { params }),

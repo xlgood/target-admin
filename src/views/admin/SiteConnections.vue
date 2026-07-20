@@ -3,7 +3,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { adminAPI } from '@/api/admin'
 import { useAdminAuthStore } from '@/stores/auth'
-import type { AdminProviderBalanceSnapshot, AdminProviderCatalogSyncRun, AdminSiteConnection, ProviderCatalogSyncResult } from '@/api/types'
+import type { AdminProviderBalanceSnapshot, AdminProviderCatalogSyncRun, AdminSiteConnection, ProviderCatalogContentSyncResult, ProviderCatalogSyncResult } from '@/api/types'
 import IdCell from '@/components/IdCell.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -31,6 +31,7 @@ const isEditing = ref(false)
 const editingId = ref<number | null>(null)
 const pingingId = ref<number | null>(null)
 const syncingProviderCatalog = ref(false)
+const syncingProviderCatalogContent = ref(false)
 const showBalanceHistory = ref(false)
 const balanceHistoryConnection = ref<AdminSiteConnection | null>(null)
 const balanceSnapshots = ref<AdminProviderBalanceSnapshot[]>([])
@@ -287,6 +288,47 @@ const handleSyncProviderCatalog = async () => {
   }
 }
 
+const handleSyncProviderCatalogContent = async () => {
+  const fansConn = findConnectionByProtocol('fansgurus')
+  const tgxConn = findConnectionByProtocol('tgx-account')
+  if (!fansConn || !tgxConn) {
+    notifyError(t('siteConnections.providerCatalog.missingConnections'))
+    return
+  }
+  const confirmed = await confirmAction({
+    description: t('siteConnections.providerCatalog.contentConfirm'),
+    confirmText: t('siteConnections.providerCatalog.contentAction'),
+  })
+  if (!confirmed) return
+  syncingProviderCatalogContent.value = true
+  try {
+    const res = await adminAPI.syncProviderCatalogContent({
+      fansgurus_connection_id: fansConn.id,
+      tgx_connection_id: tgxConn.id,
+    })
+    const data = res.data.data
+    if (data?.status === 'queued') {
+      notifySuccess(t('siteConnections.providerCatalog.contentQueued'))
+      return
+    }
+    if (data?.status === 'queue_disabled') {
+      notifyInfo(t('siteConnections.providerCatalog.contentQueueDisabled'))
+      return
+    }
+    const result = data as ProviderCatalogContentSyncResult | undefined
+    notifySuccess(t('siteConnections.providerCatalog.contentSuccess', {
+      pulled: (result?.fans_gurus_pulled ?? 0) + (result?.tgx_pulled ?? 0),
+      matched: result?.matched ?? 0,
+      updated: result?.updated ?? 0,
+      skipped: result?.skipped ?? 0,
+    }))
+  } catch (err: any) {
+    notifyError(err?.response?.data?.message || err?.message)
+  } finally {
+    syncingProviderCatalogContent.value = false
+  }
+}
+
 const openBalanceHistory = async (connection: AdminSiteConnection) => {
   balanceHistoryConnection.value = connection
   showBalanceHistory.value = true
@@ -371,6 +413,15 @@ onMounted(() => {
         >
           {{ syncingProviderCatalog ? t('siteConnections.providerCatalog.syncing') : t('siteConnections.providerCatalog.action') }}
         </Button>
+		<Button
+			v-if="canSyncProviderCatalog"
+			variant="outline"
+			class="w-full sm:w-auto"
+			:disabled="loading || syncingProviderCatalogContent"
+			@click="handleSyncProviderCatalogContent"
+		>
+			{{ syncingProviderCatalogContent ? t('siteConnections.providerCatalog.contentSyncing') : t('siteConnections.providerCatalog.contentAction') }}
+		</Button>
 				<Button v-if="canSyncProviderCatalog" variant="outline" class="w-full sm:w-auto" @click="openCatalogHistory">目录同步历史</Button>
         <Button class="w-full sm:w-auto" @click="openCreateModal">{{ t('siteConnections.createButton') }}</Button>
       </div>
